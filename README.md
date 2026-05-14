@@ -6,6 +6,7 @@ A focused, [Denote](https://github.com/protesilaos/denote)-inspired note taking 
 
 ## Features
 
+- **Flat structure** - all notes, todos and attachments live in one directory
 - **Denote-style filenames** - `YYYYMMDD--title__tag1_tag2.md`
 - **Todo tracking** - open (`-O-`) and done (`-X-`) status embedded in filename
 - **Tag picker** - telescope UI with multi-select and new tag creation when writing notes
@@ -13,16 +14,14 @@ A focused, [Denote](https://github.com/protesilaos/denote)-inspired note taking 
 - **Full-text search** - live grep across all note contents
 - **Note linking** - insert markdown links to other notes, follow links with `<CR>`
 - **Backlinks** - find all notes that link to the current note
-- **Move note** - move a note to a different folder via picker; all notes linking to it are updated automatically
 - **Retag** - change tags on the current note, file renamed automatically; all notes linking to it are updated automatically
-- **Image paste** - paste clipboard images into `99_attachments/` via img-clip
+- **Image paste** - paste clipboard images via img-clip, saved as `YYYYMMDD--name.ext`
 - **Notes index** - virtual buffer listing all notes grouped by date with status indicators
-- **Folder structure** - organised inbox, zettel, lists, todos, projects and attachments
 
 ## Requirements
 
 - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
-- [img-clip.nvim](https://github.com/HakonHarnes/img-clip.nvim)
+- [img-clip.nvim](https://github.com/HakonHarnes/img-clip.nvim) (optional, for image paste)
 - `ripgrep` (for content search)
 - `find` (for file listing)
 
@@ -52,26 +51,20 @@ These are the defaults - only set what you want to override:
 require("denim").setup({
   notes_dir = "~/notes",
 
-  folders = {
-    inbox       = "00_inbox",
-    zettel      = "10_zettel",
-    lists       = "20_lists",
-    todos       = "30_todos",
-    projects    = "40_projects",
-    attachments = "99_attachments",
-  },
-
   keymaps = {
-    new_note     = "<leader>nn",
-    search_notes = "<leader>nf",
+    new_note       = "<leader>nn",
+    search_notes   = "<leader>nf",
     search_content = "<leader>ns",
-    search_tags  = "<leader>nt",
-    insert_link  = "<leader>nl",
-    paste_image  = "<leader>np",
-    new_todo     = "<leader>nTn",
-    open_todos   = "<leader>nTo",
-    done_todos   = "<leader>nTx",
-    todo_done    = "<leader>nTd",
+    search_tags    = "<leader>nt",
+    insert_link    = "<leader>nl",
+    backlinks      = "<leader>nb",
+    paste_image    = "<leader>np",
+    retag          = "<leader>nr",
+    new_todo       = "<leader>nTn",
+    open_todos     = "<leader>nTo",
+    done_todos     = "<leader>nTx",
+    todo_done      = "<leader>nTd",
+    open_index     = "<leader>ni",
   },
 })
 ```
@@ -80,25 +73,24 @@ require("denim").setup({
 
 | Key | Action |
 |---|---|
-| `<leader>nn` | New note in inbox |
+| `<leader>nn` | New note |
 | `<leader>nf` | Find note by filename |
 | `<leader>ns` | Search note contents (live grep) |
 | `<leader>nt` | Browse and search tags |
 | `<leader>nl` | Insert link to another note |
+| `<leader>nb` | Show backlinks to current note |
 | `<leader>np` | Paste image from clipboard |
+| `<leader>nr` | Retag current note |
 | `<leader>nTn` | New todo |
 | `<leader>nTo` | List open todos |
 | `<leader>nTx` | List done todos |
 | `<leader>nTd` | Mark current todo as done |
-| `<CR>` | Follow markdown link (inside note files) |
-| `<leader>nb` | Show backlinks to current note |
-| `<leader>nm` | Move current note to a different folder |
-| `<leader>nr` | Retag current note |
 | `<leader>ni` | Open notes index |
+| `<CR>` | Follow markdown link (inside note files) |
 
 ## File Naming
 
-Filenames encode date, title, status and tags - no frontmatter required.
+Filenames encode date, title, status and tags - no frontmatter required. Everything lives flat in `notes_dir`.
 
 **Notes**
 ```
@@ -108,9 +100,15 @@ YYYYMMDD--title-slug__tag1_tag2.md
 
 **Todos**
 ```
-YYYYMMDD-O-title-slug__tag1_tag2.md   ← open
-YYYYMMDD-X-title-slug__tag1_tag2.md   ← done
+YYYYMMDD-O-title-slug__tag1_tag2.md   <- open
+YYYYMMDD-X-title-slug__tag1_tag2.md   <- done
 20260514-O-fix-login-bug__backend.md
+```
+
+**Attachments**
+```
+YYYYMMDD--name.ext
+20260514--architecture-diagram.png
 ```
 
 `<leader>nTd` renames the current file in place, swapping `-O-` for `-X-`.
@@ -119,7 +117,7 @@ YYYYMMDD-X-title-slug__tag1_tag2.md   ← done
 
 When creating a note or todo, after entering the title a telescope picker appears showing all tags already used across your notes. Use `<Tab>` to select multiple existing tags. Type a new tag name and press `<Enter>` to create it - both selected and typed tags are applied together.
 
-`<leader>nt` opens the same picker for searching: selecting one tag shows all lines containing it, selecting multiple filters to files containing every selected tag.
+`<leader>nt` opens the same picker for searching: selecting one tag shows all files containing it, selecting multiple filters to files containing every selected tag.
 
 ## Notes Index
 
@@ -130,12 +128,12 @@ When creating a note or todo, after entering the title a telescope picker appear
 
 ## 2026-05-14
 
-- [ ] [Fix login bug](30_todos/20260514-O-fix-login-bug__backend.md)
-- [Zettelkasten intro](10_zettel/20260514--zettelkasten-intro__pkm.md)
+- [ ] [Fix login bug](20260514-O-fix-login-bug__backend.md)
+- [Zettelkasten intro](20260514--zettelkasten-intro__pkm.md)
 
 ## 2026-05-13
 
-- [x] [Write tests](30_todos/20260513-X-write-tests.md)
+- [x] [Write tests](20260513-X-write-tests.md)
 ```
 
 | Key | Action |
@@ -144,33 +142,20 @@ When creating a note or todo, after entering the title a telescope picker appear
 | `r` | Refresh the index |
 | `q` | Close the index |
 
-## Folder Structure
-
-Folders are created automatically on first launch:
-
-```
-notes/
-├── 00_inbox/        ← new notes land here
-├── 10_zettel/       ← permanent notes
-├── 20_lists/        ← lists
-├── 30_todos/        ← todos
-├── 40_projects/     ← project notes
-└── 99_attachments/  ← images and documents
-```
-
 ## User Commands
 
 All features are also available as commands, useful for custom keymaps or scripts:
 
 | Command | Action |
 |---|---|
-| `:DenimNew` | New note in inbox |
-| `:DenimNewInFolder` | New note with folder selection |
+| `:DenimNew` | New note |
 | `:DenimSearch` | Find notes by filename |
 | `:DenimSearchContent` | Search note contents |
 | `:DenimTags` | Search tags |
 | `:DenimInsertLink` | Insert link to another note |
+| `:DenimBacklinks` | Show backlinks to current note |
 | `:DenimPasteImage` | Paste image from clipboard |
+| `:DenimRetag` | Retag current note |
 | `:DenimNewTodo` | New todo |
 | `:DenimOpenTodos` | List open todos |
 | `:DenimDoneTodos` | List done todos |
