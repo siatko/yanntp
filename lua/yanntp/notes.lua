@@ -4,33 +4,10 @@ local function get_opts()
   return require("yanntp.config").options
 end
 
-local function slugify_title(name)
-  local s = name:lower()
-  s = s:gsub("[%s]+", "-")
-  s = s:gsub("[^%w%-]", "")
-  s = s:gsub("%-+", "-")
-  s = s:gsub("^%-", ""):gsub("%-$", "")
-  return s
-end
-
-local function slugify_tag(tag)
-  local s = tag:lower()
-  s = s:gsub("[%s%-]+", "_")
-  s = s:gsub("[^%w_]", "")
-  s = s:gsub("_+", "_")
-  s = s:gsub("^_", ""):gsub("_$", "")
-  return s
-end
-
-local function tags_from_filename(filename)
-  local tag_part = filename:match("__([^%.]+)%.md$")
-  if not tag_part then return {} end
-  local tags = {}
-  for tag in tag_part:gmatch("[^_]+") do
-    if tag ~= "" then table.insert(tags, tag) end
-  end
-  return tags
-end
+local utils = require("yanntp.utils")
+local slugify_title   = utils.slugify_title
+local slugify_tag     = utils.slugify_tag
+local tags_from_filename = utils.tags_from_filename
 
 local function sorted_note_folders()
   local opts = get_opts()

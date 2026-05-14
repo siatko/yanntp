@@ -78,6 +78,8 @@ local function build_lines(notes)
   return lines
 end
 
+M._build_lines = build_lines
+
 function M.open()
   local opts    = get_opts()
   local bufname = opts.notes_dir .. "/.index"

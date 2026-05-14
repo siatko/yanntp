@@ -4,6 +4,8 @@ local function get_opts()
   return require("yanntp.config").options
 end
 
+local utils = require("yanntp.utils")
+
 local function get_telescope()
   local ok, t = pcall(require, "telescope.builtin")
   if not ok then
@@ -48,15 +50,7 @@ local function all_note_files(notes_dir)
   return vim.fn.systemlist(cmd)
 end
 
-local function tags_from_filename(filename)
-  local tag_part = filename:match("__([^%.]+)%.md$")
-  if not tag_part then return {} end
-  local tags = {}
-  for tag in tag_part:gmatch("[^_]+") do
-    if tag ~= "" then table.insert(tags, tag) end
-  end
-  return tags
-end
+local tags_from_filename = utils.tags_from_filename
 
 local function collect_tags(notes_dir)
   local seen, tags = {}, {}
@@ -117,20 +111,7 @@ local function open_tag_results(notes_dir, selected)
   }):find()
 end
 
-local function relative_path(from_dir, to_file)
-  local function split(path)
-    local t = {}
-    for s in path:gmatch("[^/]+") do t[#t+1] = s end
-    return t
-  end
-  local src, dst = split(from_dir), split(to_file)
-  local i = 1
-  while i <= #src and i <= #dst and src[i] == dst[i] do i = i + 1 end
-  local parts = {}
-  for _ = i, #src do parts[#parts+1] = ".." end
-  for j = i, #dst do parts[#parts+1] = dst[j] end
-  return #parts > 0 and table.concat(parts, "/") or "."
-end
+local relative_path = utils.relative_path
 
 function M.insert_link()
   local notes_dir    = get_opts().notes_dir
