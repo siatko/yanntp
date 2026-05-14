@@ -1,6 +1,7 @@
 local config = require("denim.config")
 local notes  = require("denim.notes")
 local tel    = require("denim.telescope")
+local idx    = require("denim.index")
 
 describe("integration", function()
   local dir
@@ -275,6 +276,22 @@ describe("integration", function()
       assert.equal(1, vim.fn.filereadable(new))
     end)
 
+    it("pre-selects the current note's tags in the tag picker", function()
+      local orig = dir .. "/20260514--my-note__lua_nvim.md"
+      write_file(orig, { "# MY NOTE", "" })
+      open_buf(orig)
+      mock_input("my note")
+      local received_pre_selected
+      tel.pick_tags = function(cb, opts)
+        received_pre_selected = opts and opts.pre_selected
+        cb(opts and opts.pre_selected or {})
+      end
+      notes.refactor()
+      flush()
+      table.sort(received_pre_selected or {})
+      assert.same({ "lua", "nvim" }, received_pre_selected)
+    end)
+
     it("updates links in a referencing note", function()
       local target = dir .. "/20260514--target.md"
       local linker = dir .. "/20260514--linker.md"
@@ -448,6 +465,160 @@ describe("integration", function()
       local line = vim.fn.readfile(linker)[2]
       assert.truthy(line:find("20260514--new.md", 1, true))
       assert.truthy(line:find("20260514--other.md", 1, true))
+    end)
+  end)
+
+  -- ─── ensure_notes_dir ────────────────────────────────────────────────────────
+
+  describe("ensure_notes_dir", function()
+    it("creates the notes directory if it does not exist", function()
+      local new_dir = dir .. "/subdir"
+      config.setup({ notes_dir = new_dir })
+      assert.equal(0, vim.fn.isdirectory(new_dir))
+      notes.ensure_notes_dir()
+      assert.equal(1, vim.fn.isdirectory(new_dir))
+    end)
+
+    it("does nothing when the directory already exists", function()
+      notes.ensure_notes_dir()
+      assert.equal(1, vim.fn.isdirectory(dir))
+    end)
+  end)
+
+  -- ─── paste_image ─────────────────────────────────────────────────────────────
+
+  describe("paste_image", function()
+    it("shows an error when img-clip is not installed", function()
+      local errored = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.ERROR then errored = true end end
+      notes.paste_image()
+      vim.notify = orig_notify
+      assert.truthy(errored)
+    end)
+  end)
+
+  -- ─── backlinks ───────────────────────────────────────────────────────────────
+
+  describe("backlinks", function()
+    it("notifies when no other note links to the current file", function()
+      local path = dir .. "/20260514--lonely.md"
+      write_file(path, { "# LONELY", "" })
+      open_buf(path)
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("no backlinks") then notified = true end end
+      tel.backlinks()
+      vim.notify = orig_notify
+      assert.truthy(notified)
+    end)
+
+    it("warns when no file is open", function()
+      vim.cmd("enew")
+      local warned = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
+      tel.backlinks()
+      vim.notify = orig_notify
+      assert.truthy(warned)
+    end)
+  end)
+
+  -- ─── search_tags ─────────────────────────────────────────────────────────────
+
+  describe("search_tags", function()
+    it("notifies when no tags exist across notes", function()
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("no tags") then notified = true end end
+      tel.search_tags()
+      vim.notify = orig_notify
+      assert.truthy(notified)
+    end)
+  end)
+
+  -- ─── index ───────────────────────────────────────────────────────────────────
+
+  describe("index", function()
+    it("opens a buffer listing notes from the notes dir", function()
+      write_file(dir .. "/20260514--my-note.md", { "# MY NOTE", "" })
+      idx.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.truthy(vim.tbl_contains(lines, "# Notes Index"))
+      assert.truthy(vim.tbl_contains(lines, "## 2026-05-14"))
+      assert.truthy(vim.tbl_contains(lines, "- [MY NOTE](20260514--my-note.md)"))
+    end)
+
+    it("shows a placeholder when no notes exist", function()
+      idx.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.truthy(vim.tbl_contains(lines, "No notes yet."))
+    end)
+
+    it("shows open todos with unchecked checkbox", function()
+      write_file(dir .. "/20260514-O-fix-bug.md", { "# FIX BUG", "" })
+      idx.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.truthy(vim.tbl_contains(lines, "- [ ] [FIX BUG](20260514-O-fix-bug.md)"))
+    end)
+
+    it("shows done todos with checked checkbox", function()
+      write_file(dir .. "/20260514-X-done-task.md", { "# DONE TASK", "" })
+      idx.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.truthy(vim.tbl_contains(lines, "- [x] [DONE TASK](20260514-X-done-task.md)"))
+    end)
+
+    it("reuses the same buffer on repeated open calls", function()
+      idx.open()
+      local bufnr1 = vim.api.nvim_get_current_buf()
+      open_buf(dir .. "/20260514--some-note.md")
+      write_file(dir .. "/20260514--some-note.md", { "# SOME NOTE", "" })
+      idx.open()
+      assert.equal(bufnr1, vim.api.nvim_get_current_buf())
+    end)
+
+    it("has <CR>, r and q keymaps bound on the buffer", function()
+      idx.open()
+      local bufnr = vim.api.nvim_get_current_buf()
+      local keymaps = vim.api.nvim_buf_get_keymap(bufnr, "n")
+      local lhs_set = {}
+      for _, km in ipairs(keymaps) do lhs_set[km.lhs] = true end
+      assert.truthy(lhs_set["<CR>"])
+      assert.truthy(lhs_set["r"])
+      assert.truthy(lhs_set["q"])
+    end)
+
+    it("<CR> opens the note under the cursor", function()
+      local target = dir .. "/20260514--target-note.md"
+      write_file(target, { "# TARGET NOTE", "" })
+      idx.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      local row
+      for i, l in ipairs(lines) do
+        if l:find("20260514--target-note.md", 1, true) then row = i; break end
+      end
+      assert.truthy(row, "note entry not found in index")
+      vim.api.nvim_win_set_cursor(0, { row, 5 })
+      notes.follow_link()
+      assert.equal(target, vim.fn.expand("%:p"))
+    end)
+
+    it("r refreshes the buffer with newly added notes", function()
+      idx.open()
+      local before = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.falsy(vim.tbl_contains(before, "- [FRESH NOTE](20260514--fresh-note.md)"))
+      write_file(dir .. "/20260514--fresh-note.md", { "# FRESH NOTE", "" })
+      idx.open()
+      local after = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.truthy(vim.tbl_contains(after, "- [FRESH NOTE](20260514--fresh-note.md)"))
+    end)
+
+    it("q closes the index buffer", function()
+      idx.open()
+      local bufnr = vim.api.nvim_get_current_buf()
+      vim.cmd("bdelete")
+      assert.falsy(vim.api.nvim_buf_is_loaded(bufnr))
     end)
   end)
 end)
