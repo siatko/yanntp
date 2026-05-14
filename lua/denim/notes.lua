@@ -160,7 +160,10 @@ function M.refactor()
         if new_slug ~= current_slug then
           local lines = vim.fn.readfile(new_filepath)
           if lines and lines[1] and lines[1]:match("^#%s") then
-            lines[1] = "# " .. name
+            local title = name:gsub("[%-_]+", " "):gsub("(%a+)", function(w)
+              return w:sub(1, 1):upper() .. w:sub(2)
+            end)
+            lines[1] = "# " .. title
             vim.fn.writefile(lines, new_filepath)
           end
         end

@@ -288,16 +288,18 @@ function M.pick_tags(callback, opts)
         vim.defer_fn(function()
           if not vim.api.nvim_buf_is_valid(prompt_bufnr) then return end
           local picker = action_state.get_current_picker(prompt_bufnr)
-          if not picker or not picker._multi then return end
+          if not picker or not picker._multi or not picker.manager then return end
           local pre_set = {}
           for _, t in ipairs(pre_selected) do pre_set[t] = true end
-          for _, tag in ipairs(all_tags) do
-            if pre_set[tag] then
-              picker._multi:add(picker.finder.entry_maker(tag))
+          local num = picker.manager:num_results()
+          for i = 1, num do
+            local entry = picker.manager:get_entry(i)
+            if entry and pre_set[entry.value] then
+              picker._multi:add(entry)
             end
           end
           picker:refresh(finders.new_table({ results = all_tags }), { reset_prompt = false })
-        end, 10)
+        end, 50)
       end
 
       actions.select_default:replace(function()
