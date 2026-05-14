@@ -9,8 +9,8 @@ local slugify_title   = utils.slugify_title
 local slugify_tag     = utils.slugify_tag
 local tags_from_filename = utils.tags_from_filename
 
-local function title_case(s)
-  return (s:gsub("(%a+)", function(w) return w:sub(1, 1):upper() .. w:sub(2) end))
+local function uppercase(s)
+  return s:upper()
 end
 
 function M.new_note()
@@ -36,7 +36,7 @@ function M.new_note()
 
         local f = io.open(filepath, "w")
         if f then
-          f:write("# " .. title_case(name) .. "\n\n")
+          f:write("# " .. uppercase(name) .. "\n\n")
           f:close()
         end
         vim.cmd("edit " .. vim.fn.fnameescape(filepath))
@@ -93,7 +93,7 @@ function M.new_todo()
 
         local f = io.open(filepath, "w")
         if f then
-          f:write("# " .. title_case(name) .. "\n\n")
+          f:write("# " .. uppercase(name) .. "\n\n")
           f:close()
         end
         vim.cmd("edit " .. vim.fn.fnameescape(filepath))
@@ -166,7 +166,7 @@ function M.refactor()
 
         local lines = vim.fn.readfile(new_filepath)
         if lines and lines[1] and lines[1]:match("^#%s") then
-          lines[1] = "# " .. title_case(name)
+          lines[1] = "# " .. uppercase(name)
           vim.fn.writefile(lines, new_filepath)
         end
 
