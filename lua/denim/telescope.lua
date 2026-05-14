@@ -284,6 +284,20 @@ function M.pick_tags(callback, opts)
     finder = finders.new_table({ results = all_tags }),
     sorter = conf.generic_sorter({}),
     attach_mappings = function(prompt_bufnr, map)
+      if #pre_selected > 0 then
+        vim.schedule(function()
+          local picker  = action_state.get_current_picker(prompt_bufnr)
+          local pre_set = {}
+          for _, t in ipairs(pre_selected) do pre_set[t] = true end
+          for _, tag in ipairs(all_tags) do
+            if pre_set[tag] then
+              picker._multi:add({ value = tag, ordinal = tag, display = tag })
+            end
+          end
+          picker:refresh(picker.finder, { reset_prompt = false })
+        end)
+      end
+
       actions.select_default:replace(function()
         local picker      = action_state.get_current_picker(prompt_bufnr)
         local multi       = picker:get_multi_selection()
