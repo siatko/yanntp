@@ -2,7 +2,7 @@
 
 **Yet Another Neovim Note Taking Plugin**
 
-A focused, Denote-inspired note taking plugin for Neovim. Notes are plain markdown files with structured filenames — no proprietary formats, no database, just files you own.
+A focused, [Denote](https://github.com/protesilaos/denote)-inspired note taking plugin for Neovim. Notes are plain markdown files with structured filenames — no proprietary formats, no database, just files you own.
 
 ## Features
 
