@@ -290,11 +290,6 @@ function M.pick_tags(callback, opts)
   opts = opts or {}
   local all_tags = collect_tags(get_opts().notes_dir)
 
-  if #all_tags == 0 then
-    vim.schedule(function() callback({}) end)
-    return
-  end
-
   local pickers      = require("telescope.pickers")
   local finders      = require("telescope.finders")
   local conf         = require("telescope.config").values
