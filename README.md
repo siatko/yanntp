@@ -176,3 +176,34 @@ All features are also available as commands, useful for custom keymaps or script
 | `:YanntpDoneTodos` | List done todos |
 | `:YanntpTodoDone` | Mark current todo as done |
 | `:YanntpIndex` | Open notes index |
+
+## Development
+
+### Setup
+
+Clone the repo and point lazy.nvim at the local path instead of GitHub:
+
+```lua
+{
+  dir = "~/path/to/yanntp",
+  dependencies = {
+    "nvim-telescope/telescope.nvim",
+    "HakonHarnes/img-clip.nvim",
+  },
+  config = function()
+    require("yanntp").setup({ notes_dir = "~/notes" })
+  end,
+}
+```
+
+Changes to the Lua files take effect after reloading Neovim (or `:source %` on the changed file).
+
+### Testing
+
+Tests use [plenary.nvim](https://github.com/nvim-lua/plenary.nvim), which must be installed in your Neovim setup. Run the suite from the project root:
+
+```
+make test
+```
+
+The tests cover the pure helper functions in `lua/yanntp/utils.lua` and the index line builder in `lua/yanntp/index.lua`. UI and filesystem operations are not tested.
