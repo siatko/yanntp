@@ -13,8 +13,8 @@ A focused, [Denote](https://github.com/protesilaos/denote)-inspired note taking 
 - **Full-text search** — live grep across all note contents
 - **Note linking** — insert markdown links to other notes, follow links with `<CR>`
 - **Backlinks** — find all notes that link to the current note
-- **Move note** — move a note to a different folder via picker
-- **Retag** — change tags on the current note, file renamed automatically
+- **Move note** — move a note to a different folder via picker; all notes linking to it are updated automatically
+- **Retag** — change tags on the current note, file renamed automatically; all notes linking to it are updated automatically
 - **Image paste** — paste clipboard images into `99_attachments/` via img-clip
 - **Folder structure** — organised inbox, zettel, lists, todos, projects and attachments
 
