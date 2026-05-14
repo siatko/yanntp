@@ -41,23 +41,12 @@ local function make_note(folder_key)
 
   vim.ui.input({ prompt = "Note name: " }, function(name)
     if not name or name == "" then return end
-
-    vim.ui.input({ prompt = "Tags (space-separated, optional): " }, function(tag_input)
-      vim.schedule(function()
+    vim.schedule(function()
+      require("yanntp.telescope").pick_tags(function(tags)
         local date = os.date("%Y%m%d")
         local slug = slugify_title(name)
-
-        local tag_suffix = ""
-        if tag_input and tag_input ~= "" then
-          local tags = {}
-          for word in tag_input:gmatch("%S+") do
-            table.insert(tags, slugify_tag(word))
-          end
-          if #tags > 0 then
-            tag_suffix = "__" .. table.concat(tags, "_")
-          end
-        end
-
+        local slugged = vim.tbl_map(slugify_tag, tags)
+        local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
         local filename = date .. "--" .. slug .. tag_suffix .. ".md"
         local filepath = folder_path .. "/" .. filename
 
@@ -106,23 +95,12 @@ function M.new_todo()
 
   vim.ui.input({ prompt = "Todo name: " }, function(name)
     if not name or name == "" then return end
-
-    vim.ui.input({ prompt = "Tags (space-separated, optional): " }, function(tag_input)
-      vim.schedule(function()
+    vim.schedule(function()
+      require("yanntp.telescope").pick_tags(function(tags)
         local date = os.date("%Y%m%d")
         local slug = slugify_title(name)
-
-        local tag_suffix = ""
-        if tag_input and tag_input ~= "" then
-          local tags = {}
-          for word in tag_input:gmatch("%S+") do
-            table.insert(tags, slugify_tag(word))
-          end
-          if #tags > 0 then
-            tag_suffix = "__" .. table.concat(tags, "_")
-          end
-        end
-
+        local slugged = vim.tbl_map(slugify_tag, tags)
+        local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
         local filename = date .. "-O-" .. slug .. tag_suffix .. ".md"
         local filepath = folder_path .. "/" .. filename
 

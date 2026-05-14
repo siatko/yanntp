@@ -193,6 +193,65 @@ function M.insert_link()
   }):find()
 end
 
+function M.pick_tags(callback)
+  local all_tags = collect_tags(get_opts().notes_dir)
+
+  if #all_tags == 0 then
+    vim.schedule(function() callback({}) end)
+    return
+  end
+
+  local pickers      = require("telescope.pickers")
+  local finders      = require("telescope.finders")
+  local conf         = require("telescope.config").values
+  local actions      = require("telescope.actions")
+  local action_state = require("telescope.actions.state")
+
+  pickers.new({}, {
+    prompt_title = "Tags  (<Tab> multi-select, <Esc> skip)",
+    finder = finders.new_table({ results = all_tags }),
+    sorter = conf.generic_sorter({}),
+    attach_mappings = function(prompt_bufnr, map)
+      actions.select_default:replace(function()
+        local picker      = action_state.get_current_picker(prompt_bufnr)
+        local multi       = picker:get_multi_selection()
+        local prompt_text = vim.trim(action_state.get_current_line())
+        local selected    = {}
+
+        if #multi > 0 then
+          for _, e in ipairs(multi) do
+            table.insert(selected, e.value)
+          end
+        else
+          local entry = action_state.get_selected_entry()
+          if entry then table.insert(selected, entry.value) end
+        end
+
+        -- add typed text as new tag if not already present
+        if prompt_text ~= "" then
+          local found = false
+          for _, s in ipairs(selected) do
+            if s == prompt_text then found = true; break end
+          end
+          if not found then table.insert(selected, prompt_text) end
+        end
+
+        actions.close(prompt_bufnr)
+        vim.schedule(function() callback(selected) end)
+      end)
+      map("n", "<Esc>", function()
+        actions.close(prompt_bufnr)
+        vim.schedule(function() callback({}) end)
+      end)
+      map("i", "<Esc>", function()
+        actions.close(prompt_bufnr)
+        vim.schedule(function() callback({}) end)
+      end)
+      return true
+    end,
+  }):find()
+end
+
 function M.list_open_todos()
   local t = get_telescope()
   if not t then return end
