@@ -212,7 +212,7 @@ Tests use [plenary.nvim](https://github.com/nvim-lua/plenary.nvim), which must b
 make test
 ```
 
-The tests cover the pure helper functions in `lua/denim/utils.lua` and the index line builder in `lua/denim/index.lua`. UI and filesystem operations are not tested - because some things are better left to faith.
+The tests cover the pure helper functions in `lua/denim/utils.lua`, the index line builder in `lua/denim/index.lua`, and integration tests for all user-facing operations: note creation, todo creation and completion, refactor, link following, and more.
 
 ## TODO
 
