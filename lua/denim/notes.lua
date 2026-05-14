@@ -19,6 +19,7 @@ function M.new_note()
         local date = os.date("%Y%m%d")
         local slug = slugify_title(name)
         local slugged = vim.tbl_map(slugify_tag, tags)
+        table.sort(slugged)
         local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
         local filename = date .. "--" .. slug .. tag_suffix .. ".md"
         local filepath = opts.notes_dir .. "/" .. filename
@@ -29,10 +30,13 @@ function M.new_note()
           return
         end
 
+        local f = io.open(filepath, "w")
+        if f then
+          f:write("# " .. name .. "\n\n")
+          f:close()
+        end
         vim.cmd("edit " .. vim.fn.fnameescape(filepath))
         vim.schedule(function()
-          vim.api.nvim_buf_set_lines(0, 0, -1, false, { "# " .. name, "" })
-          vim.cmd("write")
           vim.api.nvim_win_set_cursor(0, { 2, 0 })
           vim.cmd("startinsert")
         end)
@@ -74,6 +78,7 @@ function M.new_todo()
         local date = os.date("%Y%m%d")
         local slug = slugify_title(name)
         local slugged = vim.tbl_map(slugify_tag, tags)
+        table.sort(slugged)
         local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
         local filename = date .. "-O-" .. slug .. tag_suffix .. ".md"
         local filepath = opts.notes_dir .. "/" .. filename
@@ -84,10 +89,13 @@ function M.new_todo()
           return
         end
 
+        local f = io.open(filepath, "w")
+        if f then
+          f:write("# " .. name .. "\n\n")
+          f:close()
+        end
         vim.cmd("edit " .. vim.fn.fnameescape(filepath))
         vim.schedule(function()
-          vim.api.nvim_buf_set_lines(0, 0, -1, false, { "# " .. name, "" })
-          vim.cmd("write")
           vim.api.nvim_win_set_cursor(0, { 2, 0 })
           vim.cmd("startinsert")
         end)
@@ -113,7 +121,7 @@ function M.todo_done()
   vim.notify("denim: done — " .. new_filename, vim.log.levels.INFO)
 end
 
-function M.retag()
+function M.refactor()
   local filepath = vim.fn.expand("%:p")
   if filepath == "" then
     vim.notify("denim: no file open", vim.log.levels.WARN)
@@ -122,27 +130,40 @@ function M.retag()
 
   local filename     = vim.fn.fnamemodify(filepath, ":t")
   local current_tags = tags_from_filename(filename)
-  local title        = #current_tags > 0
-    and "Retag  (current: " .. table.concat(current_tags, ", ") .. ")"
-    or  "Retag  (no current tags)"
+  local base         = filename:match("^(.-)__[^%.]+%.md$") or filename:match("^(.-)%.md$")
 
-  require("denim.telescope").pick_tags(function(tags)
-    local slugged    = vim.tbl_map(slugify_tag, tags)
-    local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
-    local base       = filename:match("^(.-)__[^%.]+%.md$") or filename:match("^(.-)%.md$")
-    local new_filename = base .. tag_suffix .. ".md"
-    local new_filepath = vim.fn.fnamemodify(filepath, ":h") .. "/" .. new_filename
+  -- Split base into date+marker prefix and slug
+  -- Formats: YYYYMMDD--slug  /  YYYYMMDD-O-slug  /  YYYYMMDD-X-slug
+  local date_and_marker = base:match("^(%d+%-[OX]%-)") or base:match("^(%d+%-%-)")
+  local current_slug    = date_and_marker and base:sub(#date_and_marker + 1) or base
 
-    if new_filepath == filepath then
-      vim.notify("denim: tags unchanged", vim.log.levels.INFO)
-      return
-    end
+  vim.ui.input({ prompt = "Note name: ", default = current_slug }, function(name)
+    if name == nil then return end
 
-    vim.fn.rename(filepath, new_filepath)
-    require("denim.telescope").update_links_to(filepath, new_filepath)
-    vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
-    vim.notify("denim: → " .. new_filename, vim.log.levels.INFO)
-  end, { title = title })
+    local new_slug = (name == "" or name == current_slug)
+      and current_slug
+      or slugify_title(name)
+
+    vim.schedule(function()
+      require("denim.telescope").pick_tags(function(tags)
+        local slugged    = vim.tbl_map(slugify_tag, tags)
+        table.sort(slugged)
+        local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
+        local new_filename = (date_and_marker or "") .. new_slug .. tag_suffix .. ".md"
+        local new_filepath = vim.fn.fnamemodify(filepath, ":h") .. "/" .. new_filename
+
+        if new_filepath == filepath then
+          vim.notify("denim: nothing changed", vim.log.levels.INFO)
+          return
+        end
+
+        vim.fn.rename(filepath, new_filepath)
+        require("denim.telescope").update_links_to(filepath, new_filepath)
+        vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
+        vim.notify("denim: → " .. new_filename, vim.log.levels.INFO)
+      end, { pre_selected = current_tags })
+    end)
+  end)
 end
 
 function M.paste_image()
@@ -157,24 +178,29 @@ function M.paste_image()
   vim.ui.input({ prompt = "Image name: " }, function(name)
     if not name or name == "" then return end
     vim.schedule(function()
-      local date = os.date("%Y%m%d")
-      local file_name = date .. "--" .. name
-      local existing = vim.fn.glob(opts.notes_dir .. "/" .. file_name .. ".*")
-      if existing ~= "" then
-        vim.notify(
-          "denim: image already exists: " .. vim.fn.fnamemodify(existing, ":t"),
-          vim.log.levels.WARN
-        )
-        return
-      end
+      require("denim.telescope").pick_tags(function(tags)
+        local date = os.date("%Y%m%d")
+        local slugged = vim.tbl_map(slugify_tag, tags)
+        table.sort(slugged)
+        local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
+        local file_name = date .. "--" .. name .. tag_suffix
+        local existing = vim.fn.glob(opts.notes_dir .. "/" .. file_name .. ".*")
+        if existing ~= "" then
+          vim.notify(
+            "denim: image already exists: " .. vim.fn.fnamemodify(existing, ":t"),
+            vim.log.levels.WARN
+          )
+          return
+        end
 
-      img_clip.paste_image({
-        dir_path = opts.notes_dir,
-        file_name = file_name,
-        prompt_for_file_name = false,
-        insert_mode_after_paste = false,
-        template = "![$FILE_NAME_NO_EXT]($FILE_PATH)",
-      })
+        img_clip.paste_image({
+          dir_path = opts.notes_dir,
+          file_name = file_name,
+          prompt_for_file_name = false,
+          insert_mode_after_paste = false,
+          template = "![$FILE_NAME_NO_EXT]($FILE_PATH)",
+        })
+      end)
     end)
   end)
 end

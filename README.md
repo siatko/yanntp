@@ -59,7 +59,7 @@ require("denim").setup({
     insert_link    = "<leader>nl",
     backlinks      = "<leader>nb",
     paste_image    = "<leader>np",
-    retag          = "<leader>nr",
+    refactor       = "<leader>nr",
     new_todo       = "<leader>nTn",
     open_todos     = "<leader>nTo",
     done_todos     = "<leader>nTx",
@@ -80,7 +80,7 @@ require("denim").setup({
 | `<leader>nl` | Insert link to another note |
 | `<leader>nb` | Show backlinks to current note |
 | `<leader>np` | Paste image from clipboard |
-| `<leader>nr` | Retag current note |
+| `<leader>nr` | Refactor current note (rename + retag) |
 | `<leader>nTn` | New todo |
 | `<leader>nTo` | List open todos |
 | `<leader>nTx` | List done todos |

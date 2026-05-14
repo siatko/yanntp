@@ -43,9 +43,9 @@ function M.setup(opts)
         require("denim.telescope").backlinks()
       end, { desc = "denim: show backlinks" })
     end
-    if keymaps.retag then
-      vim.keymap.set("n", keymaps.retag, notes.retag, {
-        desc = "denim: retag current note",
+    if keymaps.refactor then
+      vim.keymap.set("n", keymaps.refactor, notes.refactor, {
+        desc = "denim: refactor current note",
       })
     end
     if keymaps.new_todo then
@@ -95,8 +95,8 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimBacklinks", function()
     require("denim.telescope").backlinks()
   end, { desc = "Show backlinks to current note" })
-  vim.api.nvim_create_user_command("DenimRetag", notes.retag, {
-    desc = "Retag current note",
+  vim.api.nvim_create_user_command("DenimRefactor", notes.refactor, {
+    desc = "Refactor current note (rename + retag)",
   })
   vim.api.nvim_create_user_command("DenimNew", notes.new_note, {
     desc = "Create a new note in inbox",

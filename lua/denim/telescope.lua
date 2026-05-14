@@ -268,7 +268,10 @@ end
 
 function M.pick_tags(callback, opts)
   opts = opts or {}
-  local all_tags = collect_tags(get_opts().notes_dir)
+  local pre_selected = opts.pre_selected or {}
+  local all_tags     = collect_tags(get_opts().notes_dir)
+
+  table.sort(all_tags)
 
   local pickers      = require("telescope.pickers")
   local finders      = require("telescope.finders")
@@ -291,12 +294,13 @@ function M.pick_tags(callback, opts)
           for _, e in ipairs(multi) do
             table.insert(selected, e.value)
           end
-        else
-          local entry = action_state.get_selected_entry()
-          if entry then table.insert(selected, entry.value) end
+        elseif prompt_text == "" then
+          -- nothing explicitly selected: keep existing tags
+          actions.close(prompt_bufnr)
+          vim.schedule(function() callback(pre_selected) end)
+          return
         end
 
-        -- add typed text as new tag if not already present
         if prompt_text ~= "" then
           local found = false
           for _, s in ipairs(selected) do
@@ -310,11 +314,11 @@ function M.pick_tags(callback, opts)
       end)
       map("n", "<Esc>", function()
         actions.close(prompt_bufnr)
-        vim.schedule(function() callback({}) end)
+        vim.schedule(function() callback(pre_selected) end)
       end)
       map("i", "<Esc>", function()
         actions.close(prompt_bufnr)
-        vim.schedule(function() callback({}) end)
+        vim.schedule(function() callback(pre_selected) end)
       end)
       return true
     end,
