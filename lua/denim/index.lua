@@ -104,14 +104,14 @@ function M.open()
 
   vim.keymap.set("n", "<CR>", function()
     require("denim.notes").follow_link()
-  end, { buffer = bufnr, desc = "yanntp: follow link" })
+  end, { buffer = bufnr, desc = "denim: follow link" })
 
   vim.keymap.set("n", "r", function()
     M.open()
-  end, { buffer = bufnr, desc = "yanntp: refresh index" })
+  end, { buffer = bufnr, desc = "denim: refresh index" })
 
   vim.keymap.set("n", "q", "<cmd>bdelete<cr>", {
-    buffer = bufnr, desc = "yanntp: close index",
+    buffer = bufnr, desc = "denim: close index",
   })
 end
 

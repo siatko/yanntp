@@ -9,7 +9,7 @@ local utils = require("denim.utils")
 local function get_telescope()
   local ok, t = pcall(require, "telescope.builtin")
   if not ok then
-    vim.notify("yanntp: telescope.nvim is required for search", vim.log.levels.ERROR)
+    vim.notify("denim: telescope.nvim is required for search", vim.log.levels.ERROR)
     return nil
   end
   return t
@@ -85,7 +85,7 @@ end
 local function open_tag_results(notes_dir, selected)
   local files = files_with_all_tags(notes_dir, selected)
   if #files == 0 then
-    vim.notify("yanntp: no notes found for tags: " .. table.concat(selected, " "), vim.log.levels.INFO)
+    vim.notify("denim: no notes found for tags: " .. table.concat(selected, " "), vim.log.levels.INFO)
     return
   end
 
@@ -118,7 +118,7 @@ function M.insert_link()
   local current_file = vim.fn.expand("%:p")
 
   if current_file == "" then
-    vim.notify("yanntp: save the file before inserting a link", vim.log.levels.WARN)
+    vim.notify("denim: save the file before inserting a link", vim.log.levels.WARN)
     return
   end
 
@@ -209,7 +209,7 @@ function M.update_links_to(old_filepath, new_filepath)
 
   if updated > 0 then
     vim.notify(
-      string.format("yanntp: updated links in %d note%s", updated, updated == 1 and "" or "s"),
+      string.format("denim: updated links in %d note%s", updated, updated == 1 and "" or "s"),
       vim.log.levels.INFO
     )
   end
@@ -218,7 +218,7 @@ end
 function M.backlinks()
   local current_file = vim.fn.expand("%:p")
   if current_file == "" then
-    vim.notify("yanntp: save the file first", vim.log.levels.WARN)
+    vim.notify("denim: save the file first", vim.log.levels.WARN)
     return
   end
 
@@ -238,7 +238,7 @@ function M.backlinks()
   end
 
   if #results == 0 then
-    vim.notify("yanntp: no backlinks to " .. filename, vim.log.levels.INFO)
+    vim.notify("denim: no backlinks to " .. filename, vim.log.levels.INFO)
     return
   end
 
@@ -349,7 +349,7 @@ function M.search_tags()
   local all_tags = collect_tags(notes_dir)
 
   if #all_tags == 0 then
-    vim.notify("yanntp: no tags found in notes", vim.log.levels.INFO)
+    vim.notify("denim: no tags found in notes", vim.log.levels.INFO)
     return
   end
 

@@ -38,7 +38,7 @@ local function make_note(folder_key)
         local filepath = folder_path .. "/" .. filename
 
         if vim.fn.filereadable(filepath) == 1 then
-          vim.notify("yanntp: note already exists, opening: " .. filename, vim.log.levels.INFO)
+          vim.notify("denim: note already exists, opening: " .. filename, vim.log.levels.INFO)
           vim.cmd("edit " .. vim.fn.fnameescape(filepath))
           return
         end
@@ -68,7 +68,7 @@ function M.follow_link()
       if vim.fn.filereadable(target) == 1 then
         vim.cmd("edit " .. vim.fn.fnameescape(target))
       else
-        vim.notify("yanntp: file not found: " .. target, vim.log.levels.WARN)
+        vim.notify("denim: file not found: " .. target, vim.log.levels.WARN)
       end
       return
     end
@@ -92,7 +92,7 @@ function M.new_todo()
         local filepath = folder_path .. "/" .. filename
 
         if vim.fn.filereadable(filepath) == 1 then
-          vim.notify("yanntp: todo already exists, opening: " .. filename, vim.log.levels.INFO)
+          vim.notify("denim: todo already exists, opening: " .. filename, vim.log.levels.INFO)
           vim.cmd("edit " .. vim.fn.fnameescape(filepath))
           return
         end
@@ -112,7 +112,7 @@ function M.todo_done()
   local filename = vim.fn.fnamemodify(filepath, ":t")
 
   if not filename:find("-O-", 1, true) then
-    vim.notify("yanntp: current file is not an open todo", vim.log.levels.WARN)
+    vim.notify("denim: current file is not an open todo", vim.log.levels.WARN)
     return
   end
 
@@ -121,13 +121,13 @@ function M.todo_done()
 
   vim.fn.rename(filepath, new_filepath)
   vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
-  vim.notify("yanntp: done — " .. new_filename, vim.log.levels.INFO)
+  vim.notify("denim: done — " .. new_filename, vim.log.levels.INFO)
 end
 
 function M.move_note()
   local filepath = vim.fn.expand("%:p")
   if filepath == "" then
-    vim.notify("yanntp: no file open", vim.log.levels.WARN)
+    vim.notify("denim: no file open", vim.log.levels.WARN)
     return
   end
 
@@ -153,20 +153,20 @@ function M.move_note()
     if not choice then return end
     local new_filepath = choice.path .. "/" .. filename
     if vim.fn.filereadable(new_filepath) == 1 then
-      vim.notify("yanntp: file already exists in " .. choice.folder, vim.log.levels.WARN)
+      vim.notify("denim: file already exists in " .. choice.folder, vim.log.levels.WARN)
       return
     end
     vim.fn.rename(filepath, new_filepath)
     require("denim.telescope").update_links_to(filepath, new_filepath)
     vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
-    vim.notify("yanntp: moved to " .. choice.folder, vim.log.levels.INFO)
+    vim.notify("denim: moved to " .. choice.folder, vim.log.levels.INFO)
   end)
 end
 
 function M.retag()
   local filepath = vim.fn.expand("%:p")
   if filepath == "" then
-    vim.notify("yanntp: no file open", vim.log.levels.WARN)
+    vim.notify("denim: no file open", vim.log.levels.WARN)
     return
   end
 
@@ -184,21 +184,21 @@ function M.retag()
     local new_filepath = vim.fn.fnamemodify(filepath, ":h") .. "/" .. new_filename
 
     if new_filepath == filepath then
-      vim.notify("yanntp: tags unchanged", vim.log.levels.INFO)
+      vim.notify("denim: tags unchanged", vim.log.levels.INFO)
       return
     end
 
     vim.fn.rename(filepath, new_filepath)
     require("denim.telescope").update_links_to(filepath, new_filepath)
     vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
-    vim.notify("yanntp: → " .. new_filename, vim.log.levels.INFO)
+    vim.notify("denim: → " .. new_filename, vim.log.levels.INFO)
   end, { title = title })
 end
 
 function M.paste_image()
   local ok, img_clip = pcall(require, "img-clip")
   if not ok then
-    vim.notify("yanntp: img-clip.nvim is required for image pasting", vim.log.levels.ERROR)
+    vim.notify("denim: img-clip.nvim is required for image pasting", vim.log.levels.ERROR)
     return
   end
 
@@ -211,7 +211,7 @@ function M.paste_image()
       local existing = vim.fn.glob(attachments_dir .. "/" .. name .. ".*")
       if existing ~= "" then
         vim.notify(
-          "yanntp: image already exists: " .. vim.fn.fnamemodify(existing, ":t"),
+          "denim: image already exists: " .. vim.fn.fnamemodify(existing, ":t"),
           vim.log.levels.WARN
         )
         return

@@ -83,7 +83,7 @@ function M.setup(opts)
   local notes_dir = require("denim.config").options.notes_dir
   vim.api.nvim_create_augroup("denim", { clear = true })
   vim.api.nvim_create_autocmd("BufEnter", {
-    group = "yanntp",
+    group = "denim",
     pattern = "*.md",
     callback = function()
       if vim.startswith(vim.fn.expand("%:p"), notes_dir) then
