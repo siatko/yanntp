@@ -2,13 +2,13 @@
 
 **Denote + vim = denim**
 
-A [Denote](https://github.com/protesilaos/denote)-inspired note-taking plugin for Neovim. Plain markdown files, structured filenames, no database, no proprietary formats — just files you own and a plugin you'll actually understand when it breaks.
+A [Denote](https://github.com/protesilaos/denote)-inspired note-taking plugin for Neovim. Plain markdown files, structured filenames, no database, no proprietary formats - just files you own and a plugin you'll actually understand when it breaks.
 
 Finally, a reason to open Neovim other than accidentally.
 
 ## Features
 
-- **Flat structure** - all notes, todos and attachments live in one directory (Marie Kondo would approve)
+- **Flat structure** - all notes, todos and attachments live in one directory (one folder to rule them all)
 - **Denote-style filenames** - `YYYYMMDD--title__tag1_tag2.md` (ugly at first, beautiful once you get it)
 - **Todo tracking** - open (`-O-`) and done (`-X-`) status embedded in filename, so your shame is visible in the filesystem
 - **Tag picker** - Telescope UI with multi-select and new tag creation when writing notes
@@ -48,7 +48,7 @@ Finally, a reason to open Neovim other than accidentally.
 
 ## Configuration
 
-These are the defaults — only set what you want to override. Don't override everything just because you can.
+These are the defaults - only set what you want to override. Don't override everything just because you can.
 
 ```lua
 require("denim").setup({
@@ -93,7 +93,7 @@ require("denim").setup({
 
 ## File Naming
 
-Filenames encode date, title, status and tags — no frontmatter required. Everything lives flat in `notes_dir`. It looks weird. You'll get used to it. Then you'll love it. Then you'll evangelize it at parties and lose friends.
+Filenames encode date, title, status and tags - no frontmatter required. Everything lives flat in `notes_dir`. It looks weird. You'll get used to it. Then you'll love it. Then you'll evangelize it at parties and lose friends.
 
 **Notes**
 ```
@@ -118,7 +118,7 @@ YYYYMMDD--name.ext
 
 ## Tag Workflow
 
-When creating a note or todo, after entering the title a Telescope picker appears showing all tags already used across your notes. Use `<Tab>` to select multiple existing tags. Type a new tag name and press `<Enter>` to create it — both selected and typed tags are applied together.
+When creating a note or todo, after entering the title a Telescope picker appears showing all tags already used across your notes. Use `<Tab>` to select multiple existing tags. Type a new tag name and press `<Enter>` to create it - both selected and typed tags are applied together.
 
 `<leader>nt` opens the same picker for searching: selecting one tag shows all files containing it, selecting multiple filters to files containing every selected tag. Great for rediscovering notes you forgot you wrote.
 
@@ -194,7 +194,7 @@ Tests use [plenary.nvim](https://github.com/nvim-lua/plenary.nvim), which must b
 make test
 ```
 
-The tests cover the pure helper functions in `lua/denim/utils.lua` and the index line builder in `lua/denim/index.lua`. UI and filesystem operations are not tested — because some things are better left to faith.
+The tests cover the pure helper functions in `lua/denim/utils.lua` and the index line builder in `lua/denim/index.lua`. UI and filesystem operations are not tested - because some things are better left to faith.
 
 ## TODO
 
