@@ -142,7 +142,7 @@ function M.refactor()
   local file_lines  = vim.fn.readfile(filepath, "", 1)
   local current_title = (file_lines[1] and file_lines[1]:match("^#%s+(.+)$")) or current_slug
 
-  vim.ui.input({ prompt = "Note name: ", default = current_title }, function(name)
+  vim.ui.input({ prompt = "Note name: ", default = current_title:lower() }, function(name)
     if name == nil then return end
 
     local new_slug = (name == "" or name == current_title)
@@ -162,6 +162,7 @@ function M.refactor()
           return
         end
 
+        local old_buf = vim.api.nvim_get_current_buf()
         vim.fn.rename(filepath, new_filepath)
 
         local lines = vim.fn.readfile(new_filepath)
@@ -172,6 +173,7 @@ function M.refactor()
 
         require("denim.telescope").update_links_to(filepath, new_filepath)
         vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
+        vim.api.nvim_buf_delete(old_buf, { force = true })
         vim.notify("denim: → " .. new_filename, vim.log.levels.INFO)
       end, { pre_selected = current_tags })
     end)
