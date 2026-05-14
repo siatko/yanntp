@@ -2,22 +2,22 @@
 
 **Yet Another Neovim Note Taking Plugin**
 
-A focused, [Denote](https://github.com/protesilaos/denote)-inspired note taking plugin for Neovim. Notes are plain markdown files with structured filenames — no proprietary formats, no database, just files you own.
+A focused, [Denote](https://github.com/protesilaos/denote)-inspired note taking plugin for Neovim. Notes are plain markdown files with structured filenames - no proprietary formats, no database, just files you own.
 
 ## Features
 
-- **Denote-style filenames** — `YYYYMMDD--title__tag1_tag2.md`
-- **Todo tracking** — open (`-O-`) and done (`-X-`) status embedded in filename
-- **Tag picker** — telescope UI with multi-select and new tag creation when writing notes
-- **Tag search** — browse all tags used across your notes
-- **Full-text search** — live grep across all note contents
-- **Note linking** — insert markdown links to other notes, follow links with `<CR>`
-- **Backlinks** — find all notes that link to the current note
-- **Move note** — move a note to a different folder via picker; all notes linking to it are updated automatically
-- **Retag** — change tags on the current note, file renamed automatically; all notes linking to it are updated automatically
-- **Image paste** — paste clipboard images into `99_attachments/` via img-clip
-- **Notes index** — virtual buffer listing all notes grouped by date with status indicators
-- **Folder structure** — organised inbox, zettel, lists, todos, projects and attachments
+- **Denote-style filenames** - `YYYYMMDD--title__tag1_tag2.md`
+- **Todo tracking** - open (`-O-`) and done (`-X-`) status embedded in filename
+- **Tag picker** - telescope UI with multi-select and new tag creation when writing notes
+- **Tag search** - browse all tags used across your notes
+- **Full-text search** - live grep across all note contents
+- **Note linking** - insert markdown links to other notes, follow links with `<CR>`
+- **Backlinks** - find all notes that link to the current note
+- **Move note** - move a note to a different folder via picker; all notes linking to it are updated automatically
+- **Retag** - change tags on the current note, file renamed automatically; all notes linking to it are updated automatically
+- **Image paste** - paste clipboard images into `99_attachments/` via img-clip
+- **Notes index** - virtual buffer listing all notes grouped by date with status indicators
+- **Folder structure** - organised inbox, zettel, lists, todos, projects and attachments
 
 ## Requirements
 
@@ -46,7 +46,7 @@ A focused, [Denote](https://github.com/protesilaos/denote)-inspired note taking 
 
 ## Configuration
 
-These are the defaults — only set what you want to override:
+These are the defaults - only set what you want to override:
 
 ```lua
 require("yanntp").setup({
@@ -98,7 +98,7 @@ require("yanntp").setup({
 
 ## File Naming
 
-Filenames encode date, title, status and tags — no frontmatter required.
+Filenames encode date, title, status and tags - no frontmatter required.
 
 **Notes**
 ```
@@ -117,7 +117,7 @@ YYYYMMDD-X-title-slug__tag1_tag2.md   ← done
 
 ## Tag Workflow
 
-When creating a note or todo, after entering the title a telescope picker appears showing all tags already used across your notes. Use `<Tab>` to select multiple existing tags. Type a new tag name and press `<Enter>` to create it — both selected and typed tags are applied together.
+When creating a note or todo, after entering the title a telescope picker appears showing all tags already used across your notes. Use `<Tab>` to select multiple existing tags. Type a new tag name and press `<Enter>` to create it - both selected and typed tags are applied together.
 
 `<leader>nt` opens the same picker for searching: selecting one tag shows all lines containing it, selecting multiple filters to files containing every selected tag.
 
