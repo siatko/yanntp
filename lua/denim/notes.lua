@@ -9,6 +9,10 @@ local slugify_title   = utils.slugify_title
 local slugify_tag     = utils.slugify_tag
 local tags_from_filename = utils.tags_from_filename
 
+local function title_case(s)
+  return (s:gsub("(%a+)", function(w) return w:sub(1, 1):upper() .. w:sub(2) end))
+end
+
 function M.new_note()
   local opts = get_opts()
 
@@ -32,7 +36,7 @@ function M.new_note()
 
         local f = io.open(filepath, "w")
         if f then
-          f:write("# " .. name .. "\n\n")
+          f:write("# " .. title_case(name) .. "\n\n")
           f:close()
         end
         vim.cmd("edit " .. vim.fn.fnameescape(filepath))
@@ -89,7 +93,7 @@ function M.new_todo()
 
         local f = io.open(filepath, "w")
         if f then
-          f:write("# " .. name .. "\n\n")
+          f:write("# " .. title_case(name) .. "\n\n")
           f:close()
         end
         vim.cmd("edit " .. vim.fn.fnameescape(filepath))
@@ -135,10 +139,13 @@ function M.refactor()
   local date_and_marker = base:match("^(%d+%-[OX]%-)") or base:match("^(%d+%-%-)")
   local current_slug    = date_and_marker and base:sub(#date_and_marker + 1) or base
 
-  vim.ui.input({ prompt = "Note name: ", default = current_slug }, function(name)
+  local file_lines  = vim.fn.readfile(filepath, "", 1)
+  local current_title = (file_lines[1] and file_lines[1]:match("^#%s+(.+)$")) or current_slug
+
+  vim.ui.input({ prompt = "Note name: ", default = current_title }, function(name)
     if name == nil then return end
 
-    local new_slug = (name == "" or name == current_slug)
+    local new_slug = (name == "" or name == current_title)
       and current_slug
       or slugify_title(name)
 
@@ -160,10 +167,7 @@ function M.refactor()
         if new_slug ~= current_slug then
           local lines = vim.fn.readfile(new_filepath)
           if lines and lines[1] and lines[1]:match("^#%s") then
-            local title = name:gsub("[%-_]+", " "):gsub("(%a+)", function(w)
-              return w:sub(1, 1):upper() .. w:sub(2)
-            end)
-            lines[1] = "# " .. title
+            lines[1] = "# " .. title_case(name)
             vim.fn.writefile(lines, new_filepath)
           end
         end
