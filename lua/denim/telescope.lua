@@ -1,10 +1,10 @@
 local M = {}
 
 local function get_opts()
-  return require("yanntp.config").options
+  return require("denim.config").options
 end
 
-local utils = require("yanntp.utils")
+local utils = require("denim.utils")
 
 local function get_telescope()
   local ok, t = pcall(require, "telescope.builtin")

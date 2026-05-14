@@ -1,4 +1,4 @@
-local build_lines = require("yanntp.index")._build_lines
+local build_lines = require("denim.index")._build_lines
 
 describe("build_lines", function()
   it("returns placeholder when no notes", function()

@@ -1,10 +1,10 @@
 local M = {}
 
 local function get_opts()
-  return require("yanntp.config").options
+  return require("denim.config").options
 end
 
-local utils = require("yanntp.utils")
+local utils = require("denim.utils")
 local slugify_title   = utils.slugify_title
 local slugify_tag     = utils.slugify_tag
 local tags_from_filename = utils.tags_from_filename
@@ -29,7 +29,7 @@ local function make_note(folder_key)
   vim.ui.input({ prompt = "Note name: " }, function(name)
     if not name or name == "" then return end
     vim.schedule(function()
-      require("yanntp.telescope").pick_tags(function(tags)
+      require("denim.telescope").pick_tags(function(tags)
         local date = os.date("%Y%m%d")
         local slug = slugify_title(name)
         local slugged = vim.tbl_map(slugify_tag, tags)
@@ -83,7 +83,7 @@ function M.new_todo()
   vim.ui.input({ prompt = "Todo name: " }, function(name)
     if not name or name == "" then return end
     vim.schedule(function()
-      require("yanntp.telescope").pick_tags(function(tags)
+      require("denim.telescope").pick_tags(function(tags)
         local date = os.date("%Y%m%d")
         local slug = slugify_title(name)
         local slugged = vim.tbl_map(slugify_tag, tags)
@@ -157,7 +157,7 @@ function M.move_note()
       return
     end
     vim.fn.rename(filepath, new_filepath)
-    require("yanntp.telescope").update_links_to(filepath, new_filepath)
+    require("denim.telescope").update_links_to(filepath, new_filepath)
     vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
     vim.notify("yanntp: moved to " .. choice.folder, vim.log.levels.INFO)
   end)
@@ -176,7 +176,7 @@ function M.retag()
     and "Retag  (current: " .. table.concat(current_tags, ", ") .. ")"
     or  "Retag  (no current tags)"
 
-  require("yanntp.telescope").pick_tags(function(tags)
+  require("denim.telescope").pick_tags(function(tags)
     local slugged    = vim.tbl_map(slugify_tag, tags)
     local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
     local base       = filename:match("^(.-)__[^%.]+%.md$") or filename:match("^(.-)%.md$")
@@ -189,7 +189,7 @@ function M.retag()
     end
 
     vim.fn.rename(filepath, new_filepath)
-    require("yanntp.telescope").update_links_to(filepath, new_filepath)
+    require("denim.telescope").update_links_to(filepath, new_filepath)
     vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
     vim.notify("yanntp: → " .. new_filename, vim.log.levels.INFO)
   end, { title = title })

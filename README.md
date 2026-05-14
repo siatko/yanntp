@@ -1,6 +1,6 @@
-# yanntp
+# denim.nvim
 
-**Yet Another Neovim Note Taking Plugin**
+**Denote + vim = denim**
 
 A focused, [Denote](https://github.com/protesilaos/denote)-inspired note taking plugin for Neovim. Notes are plain markdown files with structured filenames - no proprietary formats, no database, just files you own.
 
@@ -31,13 +31,13 @@ A focused, [Denote](https://github.com/protesilaos/denote)-inspired note taking 
 ```lua
 -- lazy.nvim
 {
-  "siatko/yanntp",
+  "siatko/denim.nvim",
   dependencies = {
     "nvim-telescope/telescope.nvim",
     "HakonHarnes/img-clip.nvim",
   },
   config = function()
-    require("yanntp").setup({
+    require("denim").setup({
       notes_dir = "~/notes",
     })
   end,
@@ -49,7 +49,7 @@ A focused, [Denote](https://github.com/protesilaos/denote)-inspired note taking 
 These are the defaults - only set what you want to override:
 
 ```lua
-require("yanntp").setup({
+require("denim").setup({
   notes_dir = "~/notes",
 
   folders = {
@@ -123,7 +123,7 @@ When creating a note or todo, after entering the title a telescope picker appear
 
 ## Notes Index
 
-`<leader>ni` (or `:YanntpIndex`) opens a virtual buffer listing all notes grouped by date, newest first:
+`<leader>ni` (or `:DenimIndex`) opens a virtual buffer listing all notes grouped by date, newest first:
 
 ```
 # Notes Index
@@ -164,18 +164,18 @@ All features are also available as commands, useful for custom keymaps or script
 
 | Command | Action |
 |---|---|
-| `:YanntpNew` | New note in inbox |
-| `:YanntpNewInFolder` | New note with folder selection |
-| `:YanntpSearch` | Find notes by filename |
-| `:YanntpSearchContent` | Search note contents |
-| `:YanntpTags` | Search tags |
-| `:YanntpInsertLink` | Insert link to another note |
-| `:YanntpPasteImage` | Paste image from clipboard |
-| `:YanntpNewTodo` | New todo |
-| `:YanntpOpenTodos` | List open todos |
-| `:YanntpDoneTodos` | List done todos |
-| `:YanntpTodoDone` | Mark current todo as done |
-| `:YanntpIndex` | Open notes index |
+| `:DenimNew` | New note in inbox |
+| `:DenimNewInFolder` | New note with folder selection |
+| `:DenimSearch` | Find notes by filename |
+| `:DenimSearchContent` | Search note contents |
+| `:DenimTags` | Search tags |
+| `:DenimInsertLink` | Insert link to another note |
+| `:DenimPasteImage` | Paste image from clipboard |
+| `:DenimNewTodo` | New todo |
+| `:DenimOpenTodos` | List open todos |
+| `:DenimDoneTodos` | List done todos |
+| `:DenimTodoDone` | Mark current todo as done |
+| `:DenimIndex` | Open notes index |
 
 ## Development
 
@@ -185,13 +185,13 @@ Clone the repo and point lazy.nvim at the local path instead of GitHub:
 
 ```lua
 {
-  dir = "~/path/to/yanntp",
+  dir = "~/path/to/denim.nvim",
   dependencies = {
     "nvim-telescope/telescope.nvim",
     "HakonHarnes/img-clip.nvim",
   },
   config = function()
-    require("yanntp").setup({ notes_dir = "~/notes" })
+    require("denim").setup({ notes_dir = "~/notes" })
   end,
 }
 ```
@@ -206,4 +206,4 @@ Tests use [plenary.nvim](https://github.com/nvim-lua/plenary.nvim), which must b
 make test
 ```
 
-The tests cover the pure helper functions in `lua/yanntp/utils.lua` and the index line builder in `lua/yanntp/index.lua`. UI and filesystem operations are not tested.
+The tests cover the pure helper functions in `lua/denim/utils.lua` and the index line builder in `lua/denim/index.lua`. UI and filesystem operations are not tested.

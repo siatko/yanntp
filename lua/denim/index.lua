@@ -1,7 +1,7 @@
 local M = {}
 
 local function get_opts()
-  return require("yanntp.config").options
+  return require("denim.config").options
 end
 
 local function gather_notes(notes_dir)
@@ -103,7 +103,7 @@ function M.open()
   vim.api.nvim_win_set_cursor(0, { 1, 0 })
 
   vim.keymap.set("n", "<CR>", function()
-    require("yanntp.notes").follow_link()
+    require("denim.notes").follow_link()
   end, { buffer = bufnr, desc = "yanntp: follow link" })
 
   vim.keymap.set("n", "r", function()

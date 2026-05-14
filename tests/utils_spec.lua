@@ -1,4 +1,4 @@
-local utils = require("yanntp.utils")
+local utils = require("denim.utils")
 
 describe("slugify_title", function()
   it("lowercases input", function()
