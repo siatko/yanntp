@@ -43,4 +43,24 @@ function M.relative_path(from_dir, to_file)
   return #parts > 0 and table.concat(parts, "/") or "."
 end
 
+function M.find_link_path(line, col)
+  local nearest_path, nearest_dist = nil, math.huge
+  local pos = 1
+  while pos <= #line do
+    local ms, me, path = line:find("%[.-%]%((.-)%)", pos)
+    if not ms then break end
+
+    if col >= ms and col <= me then
+      return path
+    end
+    local dist = math.min(math.abs(col - ms), math.abs(col - me))
+    if dist < nearest_dist then
+      nearest_dist = dist
+      nearest_path = path
+    end
+    pos = me + 1
+  end
+  return nearest_path
+end
+
 return M

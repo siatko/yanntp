@@ -99,3 +99,41 @@ describe("relative_path", function()
     assert.equal("../../b/c/note.md", utils.relative_path("/a/x/y", "/a/b/c/note.md"))
   end)
 end)
+
+describe("find_link_path", function()
+  local line = "see [Alpha](alpha.md) and [Beta](beta.md) for details"
+
+  it("returns path when cursor is on link text", function()
+    assert.equal("alpha.md", utils.find_link_path(line, 6))
+  end)
+
+  it("returns path when cursor is on link url", function()
+    assert.equal("alpha.md", utils.find_link_path(line, 16))
+  end)
+
+  it("returns path when cursor is on closing paren", function()
+    assert.equal("alpha.md", utils.find_link_path(line, 21))
+  end)
+
+  it("returns nearest link when cursor is before all links", function()
+    assert.equal("alpha.md", utils.find_link_path(line, 1))
+  end)
+
+  it("returns nearest link when cursor is after all links", function()
+    assert.equal("beta.md", utils.find_link_path(line, #line))
+  end)
+
+  it("returns nearest link when cursor is between two links", function()
+    -- cursor at 'a' in 'and', closer to Beta
+    assert.equal("beta.md", utils.find_link_path(line, 27))
+  end)
+
+  it("returns nil when line has no links", function()
+    assert.is_nil(utils.find_link_path("no links here", 1))
+  end)
+
+  it("returns the only link on a line regardless of cursor position", function()
+    assert.equal("note.md", utils.find_link_path("- [ ] [My Note](note.md)", 1))
+    assert.equal("note.md", utils.find_link_path("- [ ] [My Note](note.md)", 3))
+  end)
+end)
