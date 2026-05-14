@@ -63,7 +63,7 @@ function M.follow_link()
   local line = vim.api.nvim_get_current_line()
   local col  = vim.api.nvim_win_get_cursor(0)[2] + 1
 
-  local first_path = nil
+  local nearest_path, nearest_dist = nil, math.huge
   local pos = 1
   while pos <= #line do
     local ms, me, path = line:find("%[.-%]%((.-)%)", pos)
@@ -73,11 +73,15 @@ function M.follow_link()
       open_path(path)
       return
     end
-    if not first_path then first_path = path end
+    local dist = math.min(math.abs(col - ms), math.abs(col - me))
+    if dist < nearest_dist then
+      nearest_dist = dist
+      nearest_path = path
+    end
     pos = me + 1
   end
 
-  if first_path then open_path(first_path) end
+  if nearest_path then open_path(nearest_path) end
 end
 
 function M.new_todo()
