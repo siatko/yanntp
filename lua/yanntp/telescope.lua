@@ -193,7 +193,60 @@ function M.insert_link()
   }):find()
 end
 
-function M.pick_tags(callback)
+function M.backlinks()
+  local current_file = vim.fn.expand("%:p")
+  if current_file == "" then
+    vim.notify("yanntp: save the file first", vim.log.levels.WARN)
+    return
+  end
+
+  local filename  = vim.fn.fnamemodify(current_file, ":t")
+  local notes_dir = get_opts().notes_dir
+  local results   = {}
+
+  for _, filepath in ipairs(all_note_files(notes_dir)) do
+    if filepath ~= current_file then
+      for _, line in ipairs(vim.fn.readfile(filepath)) do
+        if line:find(filename, 1, true) then
+          table.insert(results, filepath)
+          break
+        end
+      end
+    end
+  end
+
+  if #results == 0 then
+    vim.notify("yanntp: no backlinks to " .. filename, vim.log.levels.INFO)
+    return
+  end
+
+  local pickers = require("telescope.pickers")
+  local finders = require("telescope.finders")
+  local conf    = require("telescope.config").values
+
+  pickers.new({}, {
+    prompt_title = "Backlinks → " .. filename,
+    finder = finders.new_table({
+      results = results,
+      entry_maker = function(entry)
+        local lines = vim.fn.readfile(entry, "", 1)
+        local title = (lines and lines[1] and lines[1]:match("^#%s+(.+)$"))
+          or vim.fn.fnamemodify(entry, ":t:r")
+        return {
+          value   = entry,
+          display = title .. "  (" .. vim.fn.fnamemodify(entry, ":t") .. ")",
+          ordinal = title,
+          path    = entry,
+        }
+      end,
+    }),
+    sorter    = conf.generic_sorter({}),
+    previewer = conf.file_previewer({}),
+  }):find()
+end
+
+function M.pick_tags(callback, opts)
+  opts = opts or {}
   local all_tags = collect_tags(get_opts().notes_dir)
 
   if #all_tags == 0 then
@@ -208,7 +261,7 @@ function M.pick_tags(callback)
   local action_state = require("telescope.actions.state")
 
   pickers.new({}, {
-    prompt_title = "Tags  (<Tab> multi-select, <Esc> skip)",
+    prompt_title = opts.title or "Tags  (<Tab> multi-select, <Esc> skip)",
     finder = finders.new_table({ results = all_tags }),
     sorter = conf.generic_sorter({}),
     attach_mappings = function(prompt_bufnr, map)

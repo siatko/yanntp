@@ -38,6 +38,21 @@ function M.setup(opts)
         require("yanntp.telescope").insert_link()
       end, { desc = "yanntp: insert link to note" })
     end
+    if keymaps.backlinks then
+      vim.keymap.set("n", keymaps.backlinks, function()
+        require("yanntp.telescope").backlinks()
+      end, { desc = "yanntp: show backlinks" })
+    end
+    if keymaps.move_note then
+      vim.keymap.set("n", keymaps.move_note, notes.move_note, {
+        desc = "yanntp: move note to folder",
+      })
+    end
+    if keymaps.retag then
+      vim.keymap.set("n", keymaps.retag, notes.retag, {
+        desc = "yanntp: retag current note",
+      })
+    end
     if keymaps.new_todo then
       vim.keymap.set("n", keymaps.new_todo, notes.new_todo, {
         desc = "yanntp: new todo",
@@ -77,6 +92,15 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("YanntpInsertLink", function()
     require("yanntp.telescope").insert_link()
   end, { desc = "Insert link to another note" })
+  vim.api.nvim_create_user_command("YanntpBacklinks", function()
+    require("yanntp.telescope").backlinks()
+  end, { desc = "Show backlinks to current note" })
+  vim.api.nvim_create_user_command("YanntpMoveNote", notes.move_note, {
+    desc = "Move current note to a different folder",
+  })
+  vim.api.nvim_create_user_command("YanntpRetag", notes.retag, {
+    desc = "Retag current note",
+  })
   vim.api.nvim_create_user_command("YanntpNew", notes.new_note, {
     desc = "Create a new note in inbox",
   })

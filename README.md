@@ -12,6 +12,9 @@ A focused, Denote-inspired note taking plugin for Neovim. Notes are plain markdo
 - **Tag search** — browse all tags used across your notes
 - **Full-text search** — live grep across all note contents
 - **Note linking** — insert markdown links to other notes, follow links with `<CR>`
+- **Backlinks** — find all notes that link to the current note
+- **Move note** — move a note to a different folder via picker
+- **Retag** — change tags on the current note, file renamed automatically
 - **Image paste** — paste clipboard images into `99_attachments/` via img-clip
 - **Folder structure** — organised inbox, zettel, lists, todos, projects and attachments
 
@@ -87,6 +90,9 @@ require("yanntp").setup({
 | `<leader>nTx` | List done todos |
 | `<leader>nTd` | Mark current todo as done |
 | `<CR>` | Follow markdown link (inside note files) |
+| `<leader>nb` | Show backlinks to current note |
+| `<leader>nm` | Move current note to a different folder |
+| `<leader>nr` | Retag current note |
 
 ## File Naming
 

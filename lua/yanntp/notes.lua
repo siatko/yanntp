@@ -22,6 +22,16 @@ local function slugify_tag(tag)
   return s
 end
 
+local function tags_from_filename(filename)
+  local tag_part = filename:match("__([^%.]+)%.md$")
+  if not tag_part then return {} end
+  local tags = {}
+  for tag in tag_part:gmatch("[^_]+") do
+    if tag ~= "" then table.insert(tags, tag) end
+  end
+  return tags
+end
+
 local function sorted_note_folders()
   local opts = get_opts()
   local items = {}
@@ -135,6 +145,75 @@ function M.todo_done()
   vim.fn.rename(filepath, new_filepath)
   vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
   vim.notify("yanntp: done — " .. new_filename, vim.log.levels.INFO)
+end
+
+function M.move_note()
+  local filepath = vim.fn.expand("%:p")
+  if filepath == "" then
+    vim.notify("yanntp: no file open", vim.log.levels.WARN)
+    return
+  end
+
+  local opts        = get_opts()
+  local current_dir = vim.fn.fnamemodify(filepath, ":h")
+  local filename    = vim.fn.fnamemodify(filepath, ":t")
+  local folders     = {}
+
+  for key, folder in pairs(opts.folders) do
+    if key ~= "attachments" then
+      local folder_path = opts.notes_dir .. "/" .. folder
+      if folder_path ~= current_dir then
+        table.insert(folders, { key = key, folder = folder, path = folder_path })
+      end
+    end
+  end
+  table.sort(folders, function(a, b) return a.folder < b.folder end)
+
+  vim.ui.select(folders, {
+    prompt = "Move to:",
+    format_item = function(item) return item.folder end,
+  }, function(choice)
+    if not choice then return end
+    local new_filepath = choice.path .. "/" .. filename
+    if vim.fn.filereadable(new_filepath) == 1 then
+      vim.notify("yanntp: file already exists in " .. choice.folder, vim.log.levels.WARN)
+      return
+    end
+    vim.fn.rename(filepath, new_filepath)
+    vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
+    vim.notify("yanntp: moved to " .. choice.folder, vim.log.levels.INFO)
+  end)
+end
+
+function M.retag()
+  local filepath = vim.fn.expand("%:p")
+  if filepath == "" then
+    vim.notify("yanntp: no file open", vim.log.levels.WARN)
+    return
+  end
+
+  local filename     = vim.fn.fnamemodify(filepath, ":t")
+  local current_tags = tags_from_filename(filename)
+  local title        = #current_tags > 0
+    and "Retag  (current: " .. table.concat(current_tags, ", ") .. ")"
+    or  "Retag  (no current tags)"
+
+  require("yanntp.telescope").pick_tags(function(tags)
+    local slugged    = vim.tbl_map(slugify_tag, tags)
+    local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
+    local base       = filename:match("^(.-)__[^%.]+%.md$") or filename:match("^(.-)%.md$")
+    local new_filename = base .. tag_suffix .. ".md"
+    local new_filepath = vim.fn.fnamemodify(filepath, ":h") .. "/" .. new_filename
+
+    if new_filepath == filepath then
+      vim.notify("yanntp: tags unchanged", vim.log.levels.INFO)
+      return
+    end
+
+    vim.fn.rename(filepath, new_filepath)
+    vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
+    vim.notify("yanntp: → " .. new_filename, vim.log.levels.INFO)
+  end, { title = title })
 end
 
 function M.paste_image()
