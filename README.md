@@ -2,19 +2,21 @@
 
 **Denote + vim = denim**
 
-A focused, [Denote](https://github.com/protesilaos/denote)-inspired note taking plugin for Neovim. Notes are plain markdown files with structured filenames - no proprietary formats, no database, just files you own.
+A [Denote](https://github.com/protesilaos/denote)-inspired note-taking plugin for Neovim. Plain markdown files, structured filenames, no database, no proprietary formats — just files you own and a plugin you'll actually understand when it breaks.
+
+Finally, a reason to open Neovim other than accidentally.
 
 ## Features
 
-- **Flat structure** - all notes, todos and attachments live in one directory
-- **Denote-style filenames** - `YYYYMMDD--title__tag1_tag2.md`
-- **Todo tracking** - open (`-O-`) and done (`-X-`) status embedded in filename
-- **Tag picker** - telescope UI with multi-select and new tag creation when writing notes
-- **Tag search** - browse all tags used across your notes
+- **Flat structure** - all notes, todos and attachments live in one directory (Marie Kondo would approve)
+- **Denote-style filenames** - `YYYYMMDD--title__tag1_tag2.md` (ugly at first, beautiful once you get it)
+- **Todo tracking** - open (`-O-`) and done (`-X-`) status embedded in filename, so your shame is visible in the filesystem
+- **Tag picker** - Telescope UI with multi-select and new tag creation when writing notes
+- **Tag search** - browse all tags used across your notes, confront how many you have
 - **Full-text search** - live grep across all note contents
 - **Note linking** - insert markdown links to other notes, follow links with `<CR>`
-- **Backlinks** - find all notes that link to the current note
-- **Refactor** - rename and retag the current note in one step, file renamed automatically; all notes linking to it are updated automatically
+- **Backlinks** - find all notes that link to the current note (someone out there cares)
+- **Refactor** - rename and retag the current note in one step, file renamed automatically; all notes linking to it are updated automatically (this one actually works)
 - **Image paste** - paste clipboard images via img-clip, saved as `YYYYMMDD--name__tags.ext`
 - **Notes index** - virtual buffer listing all notes grouped by date with status indicators
 
@@ -24,6 +26,7 @@ A focused, [Denote](https://github.com/protesilaos/denote)-inspired note taking 
 - [img-clip.nvim](https://github.com/HakonHarnes/img-clip.nvim) (optional, for image paste)
 - `ripgrep` (for content search)
 - `find` (for file listing)
+- A vague sense that this time, you'll actually keep your notes organized
 
 ## Installation
 
@@ -45,7 +48,7 @@ A focused, [Denote](https://github.com/protesilaos/denote)-inspired note taking 
 
 ## Configuration
 
-These are the defaults - only set what you want to override:
+These are the defaults — only set what you want to override. Don't override everything just because you can.
 
 ```lua
 require("denim").setup({
@@ -83,14 +86,14 @@ require("denim").setup({
 | `<leader>nr` | Refactor current note (rename + retag) |
 | `<leader>nTn` | New todo |
 | `<leader>nTo` | List open todos |
-| `<leader>nTx` | List done todos |
+| `<leader>nTx` | List done todos (look at all the things you did!) |
 | `<leader>nTd` | Mark current todo as done |
 | `<leader>ni` | Open notes index |
 | `<CR>` | Follow markdown link (inside note files) |
 
 ## File Naming
 
-Filenames encode date, title, status and tags - no frontmatter required. Everything lives flat in `notes_dir`.
+Filenames encode date, title, status and tags — no frontmatter required. Everything lives flat in `notes_dir`. It looks weird. You'll get used to it. Then you'll love it. Then you'll evangelize it at parties and lose friends.
 
 **Notes**
 ```
@@ -100,8 +103,8 @@ YYYYMMDD--title-slug__tag1_tag2.md
 
 **Todos**
 ```
-YYYYMMDD-O-title-slug__tag1_tag2.md   <- open
-YYYYMMDD-X-title-slug__tag1_tag2.md   <- done
+YYYYMMDD-O-title-slug__tag1_tag2.md   <- open (you will get to this)
+YYYYMMDD-X-title-slug__tag1_tag2.md   <- done (you actually did it!)
 20260514-O-fix-login-bug__backend.md
 ```
 
@@ -111,17 +114,17 @@ YYYYMMDD--name.ext
 20260514--architecture-diagram.png
 ```
 
-`<leader>nTd` renames the current file in place, swapping `-O-` for `-X-`.
+`<leader>nTd` renames the current file in place, swapping `-O-` for `-X-`. Instant dopamine.
 
 ## Tag Workflow
 
-When creating a note or todo, after entering the title a telescope picker appears showing all tags already used across your notes. Use `<Tab>` to select multiple existing tags. Type a new tag name and press `<Enter>` to create it - both selected and typed tags are applied together.
+When creating a note or todo, after entering the title a Telescope picker appears showing all tags already used across your notes. Use `<Tab>` to select multiple existing tags. Type a new tag name and press `<Enter>` to create it — both selected and typed tags are applied together.
 
-`<leader>nt` opens the same picker for searching: selecting one tag shows all files containing it, selecting multiple filters to files containing every selected tag.
+`<leader>nt` opens the same picker for searching: selecting one tag shows all files containing it, selecting multiple filters to files containing every selected tag. Great for rediscovering notes you forgot you wrote.
 
 ## Notes Index
 
-`<leader>ni` (or `:DenimIndex`) opens a virtual buffer listing all notes grouped by date, newest first:
+`<leader>ni` (or `:DenimIndex`) opens a virtual buffer listing all notes grouped by date, newest first. A bird's-eye view of your brain:
 
 ```
 # Notes Index
@@ -140,7 +143,7 @@ When creating a note or todo, after entering the title a telescope picker appear
 |---|---|
 | `<CR>` | Open the note under the cursor |
 | `r` | Refresh the index |
-| `q` | Close the index |
+| `q` | Close the index (and pretend you didn't see all those open todos) |
 
 ## User Commands
 
@@ -191,9 +194,11 @@ Tests use [plenary.nvim](https://github.com/nvim-lua/plenary.nvim), which must b
 make test
 ```
 
-The tests cover the pure helper functions in `lua/denim/utils.lua` and the index line builder in `lua/denim/index.lua`. UI and filesystem operations are not tested.
+The tests cover the pure helper functions in `lua/denim/utils.lua` and the index line builder in `lua/denim/index.lua`. UI and filesystem operations are not tested — because some things are better left to faith.
 
 ## TODO
+
+*(Yes, a todo section. In a todo plugin. The irony is not lost on us.)*
 
 - [ ] **Filesystem tests** - add integration tests that create real files and clean up after themselves, covering note creation, refactor, and link-update flows
 - [x] **Image link navigation** - following a `<CR>` link to an image file currently errors with "no such file"; show a friendly message instead
