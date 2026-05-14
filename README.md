@@ -130,12 +130,12 @@ When creating a note or todo, after entering the title a telescope picker appear
 
 ## 2026-05-14
 
-- ○ [Fix login bug](30_todos/20260514-O-fix-login-bug__backend.md)
+- [ ] [Fix login bug](30_todos/20260514-O-fix-login-bug__backend.md)
 - [Zettelkasten intro](10_zettel/20260514--zettelkasten-intro__pkm.md)
 
 ## 2026-05-13
 
-- ✓ [Write tests](30_todos/20260513-X-write-tests.md)
+- [x] [Write tests](30_todos/20260513-X-write-tests.md)
 ```
 
 | Key | Action |

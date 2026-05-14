@@ -63,14 +63,16 @@ local function build_lines(notes)
       current_date = note.date_fmt
     end
 
-    local prefix = ""
+    local item
     if note.status == "open_todo" then
-      prefix = "○ "
+      item = "- [ ] [" .. note.title .. "](" .. note.rel_path .. ")"
     elseif note.status == "done_todo" then
-      prefix = "✓ "
+      item = "- [x] [" .. note.title .. "](" .. note.rel_path .. ")"
+    else
+      item = "- [" .. note.title .. "](" .. note.rel_path .. ")"
     end
 
-    table.insert(lines, "- " .. prefix .. "[" .. note.title .. "](" .. note.rel_path .. ")")
+    table.insert(lines, item)
   end
 
   return lines
