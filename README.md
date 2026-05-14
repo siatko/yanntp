@@ -195,7 +195,7 @@ The tests cover the pure helper functions in `lua/denim/utils.lua` and the index
 
 ## TODO
 
-- **Filesystem tests** - add integration tests that create real files and clean up after themselves, covering note creation, refactor, and link-update flows
-- **Image link navigation** - following a `<CR>` link to an image file currently errors with "no such file"; show a friendly message instead (e.g. "denim: cannot open image files directly")
-- **Pre-selected tags in refactor** - visually mark the current note's tags as already selected when the tag picker opens during refactor
-- **Refactor from a link** - allow running refactor while the cursor is on a `[title](path)` link in any note, not only when the target file is the active buffer
+- [ ] **Filesystem tests** - add integration tests that create real files and clean up after themselves, covering note creation, refactor, and link-update flows
+- [x] **Image link navigation** - following a `<CR>` link to an image file currently errors with "no such file"; show a friendly message instead
+- [ ] **Pre-selected tags in refactor** - visually mark the current note's tags as already selected when the tag picker opens during refactor
+- [ ] **Refactor from a link** - allow running refactor while the cursor is on a `[title](path)` link in any note, not only when the target file is the active buffer
