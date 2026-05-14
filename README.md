@@ -16,6 +16,7 @@ A focused, [Denote](https://github.com/protesilaos/denote)-inspired note taking 
 - **Move note** — move a note to a different folder via picker; all notes linking to it are updated automatically
 - **Retag** — change tags on the current note, file renamed automatically; all notes linking to it are updated automatically
 - **Image paste** — paste clipboard images into `99_attachments/` via img-clip
+- **Notes index** — virtual buffer listing all notes grouped by date with status indicators
 - **Folder structure** — organised inbox, zettel, lists, todos, projects and attachments
 
 ## Requirements
@@ -93,6 +94,7 @@ require("yanntp").setup({
 | `<leader>nb` | Show backlinks to current note |
 | `<leader>nm` | Move current note to a different folder |
 | `<leader>nr` | Retag current note |
+| `<leader>ni` | Open notes index |
 
 ## File Naming
 
@@ -118,6 +120,29 @@ YYYYMMDD-X-title-slug__tag1_tag2.md   ← done
 When creating a note or todo, after entering the title a telescope picker appears showing all tags already used across your notes. Use `<Tab>` to select multiple existing tags. Type a new tag name and press `<Enter>` to create it — both selected and typed tags are applied together.
 
 `<leader>nt` opens the same picker for searching: selecting one tag shows all lines containing it, selecting multiple filters to files containing every selected tag.
+
+## Notes Index
+
+`<leader>ni` (or `:YanntpIndex`) opens a virtual buffer listing all notes grouped by date, newest first:
+
+```
+# Notes Index
+
+## 2026-05-14
+
+- ○ [Fix login bug](30_todos/20260514-O-fix-login-bug__backend.md)
+- [Zettelkasten intro](10_zettel/20260514--zettelkasten-intro__pkm.md)
+
+## 2026-05-13
+
+- ✓ [Write tests](30_todos/20260513-X-write-tests.md)
+```
+
+| Key | Action |
+|---|---|
+| `<CR>` | Open the note under the cursor |
+| `r` | Refresh the index |
+| `q` | Close the index |
 
 ## Folder Structure
 
@@ -150,3 +175,4 @@ All features are also available as commands, useful for custom keymaps or script
 | `:YanntpOpenTodos` | List open todos |
 | `:YanntpDoneTodos` | List done todos |
 | `:YanntpTodoDone` | Mark current todo as done |
+| `:YanntpIndex` | Open notes index |

@@ -73,6 +73,11 @@ function M.setup(opts)
         desc = "yanntp: mark current todo as done",
       })
     end
+    if keymaps.open_index then
+      vim.keymap.set("n", keymaps.open_index, function()
+        require("yanntp.index").open()
+      end, { desc = "yanntp: open notes index" })
+    end
   end
 
   local notes_dir = require("yanntp.config").options.notes_dir
@@ -131,6 +136,9 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("YanntpDoneTodos", function()
     require("yanntp.telescope").list_done_todos()
   end, { desc = "List done todos" })
+  vim.api.nvim_create_user_command("YanntpIndex", function()
+    require("yanntp.index").open()
+  end, { desc = "Open notes index" })
 end
 
 return M

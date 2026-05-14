@@ -24,6 +24,7 @@ M.defaults = {
     open_todos = "<leader>nTo",
     done_todos = "<leader>nTx",
     todo_done = "<leader>nTd",
+    open_index = "<leader>ni",
   },
 }
 
