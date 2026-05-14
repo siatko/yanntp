@@ -45,31 +45,39 @@ function M.new_note()
   end)
 end
 
+local function open_path(path)
+  local current_dir = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h")
+  local target = vim.fn.fnamemodify(current_dir .. "/" .. path, ":p")
+  local ext = target:match("%.(%w+)$")
+  local image_exts = { png=true, jpg=true, jpeg=true, gif=true, webp=true, svg=true, bmp=true, tiff=true, tif=true }
+  if ext and image_exts[ext:lower()] then
+    vim.notify("denim: image — " .. vim.fn.fnamemodify(target, ":t"), vim.log.levels.INFO)
+  elseif vim.fn.filereadable(target) == 1 then
+    vim.cmd("edit " .. vim.fn.fnameescape(target))
+  else
+    vim.notify("denim: file not found: " .. target, vim.log.levels.WARN)
+  end
+end
+
 function M.follow_link()
   local line = vim.api.nvim_get_current_line()
   local col  = vim.api.nvim_win_get_cursor(0)[2] + 1
 
+  local first_path = nil
   local pos = 1
   while pos <= #line do
     local ms, me, path = line:find("%[.-%]%((.-)%)", pos)
     if not ms then break end
 
     if col >= ms and col <= me then
-      local current_dir = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h")
-      local target = vim.fn.fnamemodify(current_dir .. "/" .. path, ":p")
-      local ext = target:match("%.(%w+)$")
-      local image_exts = { png=true, jpg=true, jpeg=true, gif=true, webp=true, svg=true, bmp=true, tiff=true, tif=true }
-      if ext and image_exts[ext:lower()] then
-        vim.notify("denim: image — " .. vim.fn.fnamemodify(target, ":t"), vim.log.levels.INFO)
-      elseif vim.fn.filereadable(target) == 1 then
-        vim.cmd("edit " .. vim.fn.fnameescape(target))
-      else
-        vim.notify("denim: file not found: " .. target, vim.log.levels.WARN)
-      end
+      open_path(path)
       return
     end
+    if not first_path then first_path = path end
     pos = me + 1
   end
+
+  if first_path then open_path(first_path) end
 end
 
 function M.new_todo()

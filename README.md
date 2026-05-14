@@ -30,9 +30,27 @@ Finally, a reason to open Neovim other than accidentally.
 
 ## Installation
 
+**lazy.nvim** - add to your plugin list:
+
 ```lua
--- lazy.nvim
 {
+  "siatko/denim.nvim",
+  dependencies = {
+    "nvim-telescope/telescope.nvim",
+    "HakonHarnes/img-clip.nvim",
+  },
+  config = function()
+    require("denim").setup({
+      notes_dir = "~/notes",
+    })
+  end,
+}
+```
+
+**LazyVim** - create `~/.config/nvim/lua/plugins/denim.lua`:
+
+```lua
+return {
   "siatko/denim.nvim",
   dependencies = {
     "nvim-telescope/telescope.nvim",
@@ -141,7 +159,7 @@ When creating a note or todo, after entering the title a Telescope picker appear
 
 | Key | Action |
 |---|---|
-| `<CR>` | Open the note under the cursor |
+| `<CR>` | Open the note under the cursor - works anywhere on the line, not just on the link text |
 | `r` | Refresh the index |
 | `q` | Close the index (and pretend you didn't see all those open todos) |
 
