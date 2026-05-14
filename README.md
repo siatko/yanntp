@@ -14,8 +14,8 @@ A focused, [Denote](https://github.com/protesilaos/denote)-inspired note taking 
 - **Full-text search** - live grep across all note contents
 - **Note linking** - insert markdown links to other notes, follow links with `<CR>`
 - **Backlinks** - find all notes that link to the current note
-- **Retag** - change tags on the current note, file renamed automatically; all notes linking to it are updated automatically
-- **Image paste** - paste clipboard images via img-clip, saved as `YYYYMMDD--name.ext`
+- **Refactor** - rename and retag the current note in one step, file renamed automatically; all notes linking to it are updated automatically
+- **Image paste** - paste clipboard images via img-clip, saved as `YYYYMMDD--name__tags.ext`
 - **Notes index** - virtual buffer listing all notes grouped by date with status indicators
 
 ## Requirements
@@ -155,7 +155,7 @@ All features are also available as commands, useful for custom keymaps or script
 | `:DenimInsertLink` | Insert link to another note |
 | `:DenimBacklinks` | Show backlinks to current note |
 | `:DenimPasteImage` | Paste image from clipboard |
-| `:DenimRetag` | Retag current note |
+| `:DenimRefactor` | Refactor current note (rename + retag) |
 | `:DenimNewTodo` | New todo |
 | `:DenimOpenTodos` | List open todos |
 | `:DenimDoneTodos` | List done todos |
