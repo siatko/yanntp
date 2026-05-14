@@ -193,6 +193,47 @@ function M.insert_link()
   }):find()
 end
 
+function M.update_links_to(old_filepath, new_filepath)
+  local old_abs = vim.fn.fnamemodify(old_filepath, ":p")
+  local new_abs = vim.fn.fnamemodify(new_filepath, ":p")
+  local updated = 0
+
+  for _, filepath in ipairs(all_note_files(get_opts().notes_dir)) do
+    local abs      = vim.fn.fnamemodify(filepath, ":p")
+    if abs ~= old_abs and abs ~= new_abs then
+      local lines    = vim.fn.readfile(filepath)
+      local file_dir = vim.fn.fnamemodify(filepath, ":h")
+      local changed  = false
+
+      local new_lines = vim.tbl_map(function(line)
+        return line:gsub("%[(.-)%]%((.-)%)", function(text, path)
+          local resolved = vim.fn.fnamemodify(file_dir .. "/" .. path, ":p")
+          if resolved == old_abs then
+            changed = true
+            return "[" .. text .. "](" .. relative_path(file_dir, new_filepath) .. ")"
+          end
+        end)
+      end, lines)
+
+      if changed then
+        vim.fn.writefile(new_lines, filepath)
+        updated = updated + 1
+        local bufnr = vim.fn.bufnr(filepath)
+        if bufnr ~= -1 and vim.api.nvim_buf_is_loaded(bufnr) then
+          vim.api.nvim_buf_call(bufnr, function() vim.cmd("edit") end)
+        end
+      end
+    end
+  end
+
+  if updated > 0 then
+    vim.notify(
+      string.format("yanntp: updated links in %d note%s", updated, updated == 1 and "" or "s"),
+      vim.log.levels.INFO
+    )
+  end
+end
+
 function M.backlinks()
   local current_file = vim.fn.expand("%:p")
   if current_file == "" then

@@ -180,6 +180,7 @@ function M.move_note()
       return
     end
     vim.fn.rename(filepath, new_filepath)
+    require("yanntp.telescope").update_links_to(filepath, new_filepath)
     vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
     vim.notify("yanntp: moved to " .. choice.folder, vim.log.levels.INFO)
   end)
@@ -211,6 +212,7 @@ function M.retag()
     end
 
     vim.fn.rename(filepath, new_filepath)
+    require("yanntp.telescope").update_links_to(filepath, new_filepath)
     vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
     vim.notify("yanntp: → " .. new_filename, vim.log.levels.INFO)
   end, { title = title })
