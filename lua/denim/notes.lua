@@ -164,12 +164,10 @@ function M.refactor()
 
         vim.fn.rename(filepath, new_filepath)
 
-        if new_slug ~= current_slug then
-          local lines = vim.fn.readfile(new_filepath)
-          if lines and lines[1] and lines[1]:match("^#%s") then
-            lines[1] = "# " .. title_case(name)
-            vim.fn.writefile(lines, new_filepath)
-          end
+        local lines = vim.fn.readfile(new_filepath)
+        if lines and lines[1] and lines[1]:match("^#%s") then
+          lines[1] = "# " .. title_case(name)
+          vim.fn.writefile(lines, new_filepath)
         end
 
         require("denim.telescope").update_links_to(filepath, new_filepath)

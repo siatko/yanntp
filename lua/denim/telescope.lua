@@ -293,15 +293,16 @@ function M.pick_tags(callback, opts)
           for _, t in ipairs(pre_selected) do pre_set[t] = true end
           pcall(function()
             local num = picker.manager:num_results()
+            local current = picker.selection_row or 1
             for i = 1, num do
               local entry = picker.manager:get_entry(i)
               if entry and pre_set[entry.value] then
-                local row = picker:get_row(i)
-                vim.api.nvim_win_set_cursor(picker.results_win, { row, 0 })
+                picker:move_selection(i - current)
+                current = i
                 actions.toggle_selection(prompt_bufnr)
               end
             end
-            vim.api.nvim_win_set_cursor(picker.results_win, { picker:get_row(1), 0 })
+            picker:move_selection(1 - current)
           end)
         end, 50)
       end
