@@ -17,9 +17,9 @@ end
 
 local function find_cmd()
   if vim.fn.executable("fd") == 1 then
-    return { "fd", "--type", "f", "--extension", "md", "--exclude", "99_attachments" }
+    return { "fd", "--type", "f", "--extension", "md" }
   end
-  return { "find", ".", "-name", "*.md", "-not", "-path", "*/99_attachments/*" }
+  return { "find", ".", "-name", "*.md" }
 end
 
 function M.search_notes()
@@ -40,14 +40,13 @@ function M.search_content()
   t.live_grep({
     prompt_title = "Notes Content",
     cwd = get_opts().notes_dir,
-    additional_args = { "--glob", "*.md", "--glob", "!99_attachments" },
+    additional_args = { "--glob", "*.md" },
   })
 end
 
 
 local function all_note_files(notes_dir)
-  local cmd = { "find", notes_dir, "-name", "*.md", "-not", "-path", "*/99_attachments/*" }
-  return vim.fn.systemlist(cmd)
+  return vim.fn.systemlist({ "find", notes_dir, "-maxdepth", "1", "-name", "*.md" })
 end
 
 local tags_from_filename = utils.tags_from_filename
@@ -325,22 +324,22 @@ end
 function M.list_open_todos()
   local t = get_telescope()
   if not t then return end
-  local todos_dir = get_opts().notes_dir .. "/" .. get_opts().folders.todos
+  local notes_dir = get_opts().notes_dir
   t.find_files({
     prompt_title = "Open Todos",
-    cwd = todos_dir,
-    find_command = { "find", todos_dir, "-name", "*-O-*.md" },
+    cwd = notes_dir,
+    find_command = { "find", notes_dir, "-maxdepth", "1", "-name", "*-O-*.md" },
   })
 end
 
 function M.list_done_todos()
   local t = get_telescope()
   if not t then return end
-  local todos_dir = get_opts().notes_dir .. "/" .. get_opts().folders.todos
+  local notes_dir = get_opts().notes_dir
   t.find_files({
     prompt_title = "Done Todos",
-    cwd = todos_dir,
-    find_command = { "find", todos_dir, "-name", "*-X-*.md" },
+    cwd = notes_dir,
+    find_command = { "find", notes_dir, "-maxdepth", "1", "-name", "*-X-*.md" },
   })
 end
 

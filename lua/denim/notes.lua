@@ -9,22 +9,8 @@ local slugify_title   = utils.slugify_title
 local slugify_tag     = utils.slugify_tag
 local tags_from_filename = utils.tags_from_filename
 
-local function sorted_note_folders()
+function M.new_note()
   local opts = get_opts()
-  local items = {}
-  for key, folder in pairs(opts.folders) do
-    if key ~= "attachments" then
-      table.insert(items, { key = key, folder = folder })
-    end
-  end
-  table.sort(items, function(a, b) return a.folder < b.folder end)
-  return items
-end
-
-local function make_note(folder_key)
-  local opts = get_opts()
-  local folder = opts.folders[folder_key] or opts.folders.inbox
-  local folder_path = opts.notes_dir .. "/" .. folder
 
   vim.ui.input({ prompt = "Note name: " }, function(name)
     if not name or name == "" then return end
@@ -35,7 +21,7 @@ local function make_note(folder_key)
         local slugged = vim.tbl_map(slugify_tag, tags)
         local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
         local filename = date .. "--" .. slug .. tag_suffix .. ".md"
-        local filepath = folder_path .. "/" .. filename
+        local filepath = opts.notes_dir .. "/" .. filename
 
         if vim.fn.filereadable(filepath) == 1 then
           vim.notify("denim: note already exists, opening: " .. filename, vim.log.levels.INFO)
@@ -55,7 +41,7 @@ end
 
 function M.follow_link()
   local line = vim.api.nvim_get_current_line()
-  local col  = vim.api.nvim_win_get_cursor(0)[2] + 1  -- make 1-indexed
+  local col  = vim.api.nvim_win_get_cursor(0)[2] + 1
 
   local pos = 1
   while pos <= #line do
@@ -78,7 +64,6 @@ end
 
 function M.new_todo()
   local opts = get_opts()
-  local folder_path = opts.notes_dir .. "/" .. opts.folders.todos
 
   vim.ui.input({ prompt = "Todo name: " }, function(name)
     if not name or name == "" then return end
@@ -89,7 +74,7 @@ function M.new_todo()
         local slugged = vim.tbl_map(slugify_tag, tags)
         local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
         local filename = date .. "-O-" .. slug .. tag_suffix .. ".md"
-        local filepath = folder_path .. "/" .. filename
+        local filepath = opts.notes_dir .. "/" .. filename
 
         if vim.fn.filereadable(filepath) == 1 then
           vim.notify("denim: todo already exists, opening: " .. filename, vim.log.levels.INFO)
@@ -122,45 +107,6 @@ function M.todo_done()
   vim.fn.rename(filepath, new_filepath)
   vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
   vim.notify("denim: done — " .. new_filename, vim.log.levels.INFO)
-end
-
-function M.move_note()
-  local filepath = vim.fn.expand("%:p")
-  if filepath == "" then
-    vim.notify("denim: no file open", vim.log.levels.WARN)
-    return
-  end
-
-  local opts        = get_opts()
-  local current_dir = vim.fn.fnamemodify(filepath, ":h")
-  local filename    = vim.fn.fnamemodify(filepath, ":t")
-  local folders     = {}
-
-  for key, folder in pairs(opts.folders) do
-    if key ~= "attachments" then
-      local folder_path = opts.notes_dir .. "/" .. folder
-      if folder_path ~= current_dir then
-        table.insert(folders, { key = key, folder = folder, path = folder_path })
-      end
-    end
-  end
-  table.sort(folders, function(a, b) return a.folder < b.folder end)
-
-  vim.ui.select(folders, {
-    prompt = "Move to:",
-    format_item = function(item) return item.folder end,
-  }, function(choice)
-    if not choice then return end
-    local new_filepath = choice.path .. "/" .. filename
-    if vim.fn.filereadable(new_filepath) == 1 then
-      vim.notify("denim: file already exists in " .. choice.folder, vim.log.levels.WARN)
-      return
-    end
-    vim.fn.rename(filepath, new_filepath)
-    require("denim.telescope").update_links_to(filepath, new_filepath)
-    vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
-    vim.notify("denim: moved to " .. choice.folder, vim.log.levels.INFO)
-  end)
 end
 
 function M.retag()
@@ -203,12 +149,13 @@ function M.paste_image()
   end
 
   local opts = get_opts()
-  local attachments_dir = opts.notes_dir .. "/" .. opts.folders.attachments
 
   vim.ui.input({ prompt = "Image name: " }, function(name)
     if not name or name == "" then return end
     vim.schedule(function()
-      local existing = vim.fn.glob(attachments_dir .. "/" .. name .. ".*")
+      local date = os.date("%Y%m%d")
+      local file_name = date .. "--" .. name
+      local existing = vim.fn.glob(opts.notes_dir .. "/" .. file_name .. ".*")
       if existing ~= "" then
         vim.notify(
           "denim: image already exists: " .. vim.fn.fnamemodify(existing, ":t"),
@@ -218,8 +165,8 @@ function M.paste_image()
       end
 
       img_clip.paste_image({
-        dir_path = attachments_dir,
-        file_name = name,
+        dir_path = opts.notes_dir,
+        file_name = file_name,
         prompt_for_file_name = false,
         insert_mode_after_paste = false,
         template = "![$FILE_NAME_NO_EXT]($FILE_PATH)",
@@ -228,27 +175,8 @@ function M.paste_image()
   end)
 end
 
-function M.ensure_folders()
-  local opts = get_opts()
-  vim.fn.mkdir(opts.notes_dir, "p")
-  for _, folder in pairs(opts.folders) do
-    vim.fn.mkdir(opts.notes_dir .. "/" .. folder, "p")
-  end
-end
-
-function M.new_note()
-  make_note("inbox")
-end
-
-function M.new_note_in_folder()
-  local folders = sorted_note_folders()
-  vim.ui.select(folders, {
-    prompt = "Select folder:",
-    format_item = function(item) return item.folder end,
-  }, function(choice)
-    if not choice then return end
-    make_note(choice.key)
-  end)
+function M.ensure_notes_dir()
+  vim.fn.mkdir(get_opts().notes_dir, "p")
 end
 
 return M

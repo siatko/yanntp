@@ -2,14 +2,6 @@ local M = {}
 
 M.defaults = {
   notes_dir = "~/notes",
-  folders = {
-    inbox = "00_inbox",
-    zettel = "10_zettel",
-    lists = "20_lists",
-    todos = "30_todos",
-    projects = "40_projects",
-    attachments = "99_attachments",
-  },
   keymaps = {
     new_note = "<leader>nn",
     search_notes = "<leader>nf",
@@ -18,7 +10,6 @@ M.defaults = {
     paste_image = "<leader>np",
     insert_link = "<leader>nl",
     backlinks   = "<leader>nb",
-    move_note   = "<leader>nm",
     retag       = "<leader>nr",
     new_todo = "<leader>nTn",
     open_todos = "<leader>nTo",

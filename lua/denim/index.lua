@@ -6,8 +6,7 @@ end
 
 local function gather_notes(notes_dir)
   local all = vim.fn.systemlist({
-    "find", notes_dir, "-name", "*.md",
-    "-not", "-path", "*/99_attachments/*",
+    "find", notes_dir, "-maxdepth", "1", "-name", "*.md",
   })
 
   local notes = {}
@@ -26,15 +25,13 @@ local function gather_notes(notes_dir)
       local title = (file_lines and file_lines[1] and file_lines[1]:match("^#%s+(.+)$"))
         or vim.fn.fnamemodify(filepath, ":t:r")
 
-      local rel_dir = vim.fn.fnamemodify(filepath, ":h"):sub(#notes_dir + 2)
-
       table.insert(notes, {
         filepath = filepath,
         date     = date_raw,
         date_fmt = date_raw:sub(1, 4) .. "-" .. date_raw:sub(5, 6) .. "-" .. date_raw:sub(7, 8),
         title    = title,
         status   = status,
-        rel_path = rel_dir .. "/" .. filename,
+        rel_path = filename,
       })
     end
   end

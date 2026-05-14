@@ -4,7 +4,7 @@ function M.setup(opts)
   require("denim.config").setup(opts)
 
   local notes = require("denim.notes")
-  notes.ensure_folders()
+  notes.ensure_notes_dir()
 
   local keymaps = require("denim.config").options.keymaps
   if keymaps then
@@ -42,11 +42,6 @@ function M.setup(opts)
       vim.keymap.set("n", keymaps.backlinks, function()
         require("denim.telescope").backlinks()
       end, { desc = "denim: show backlinks" })
-    end
-    if keymaps.move_note then
-      vim.keymap.set("n", keymaps.move_note, notes.move_note, {
-        desc = "denim: move note to folder",
-      })
     end
     if keymaps.retag then
       vim.keymap.set("n", keymaps.retag, notes.retag, {
@@ -100,17 +95,11 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimBacklinks", function()
     require("denim.telescope").backlinks()
   end, { desc = "Show backlinks to current note" })
-  vim.api.nvim_create_user_command("DenimMoveNote", notes.move_note, {
-    desc = "Move current note to a different folder",
-  })
   vim.api.nvim_create_user_command("DenimRetag", notes.retag, {
     desc = "Retag current note",
   })
   vim.api.nvim_create_user_command("DenimNew", notes.new_note, {
     desc = "Create a new note in inbox",
-  })
-  vim.api.nvim_create_user_command("DenimNewInFolder", notes.new_note_in_folder, {
-    desc = "Create a new note (select folder)",
   })
   vim.api.nvim_create_user_command("DenimSearch", function()
     require("denim.telescope").search_notes()
@@ -122,7 +111,7 @@ function M.setup(opts)
     require("denim.telescope").search_tags()
   end, { desc = "Search tags in notes" })
   vim.api.nvim_create_user_command("DenimPasteImage", notes.paste_image, {
-    desc = "Paste image from clipboard into attachments",
+    desc = "Paste image from clipboard",
   })
   vim.api.nvim_create_user_command("DenimNewTodo", notes.new_todo, {
     desc = "Create a new todo",
