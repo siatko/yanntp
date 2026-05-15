@@ -2,6 +2,7 @@ local config = require("denim.config")
 local notes  = require("denim.notes")
 local tel    = require("denim.telescope")
 local idx    = require("denim.index")
+local st     = require("denim.stats")
 
 describe("integration", function()
   local dir
@@ -870,6 +871,106 @@ describe("integration", function()
       local bufnr = vim.api.nvim_get_current_buf()
       vim.cmd("bdelete")
       assert.falsy(vim.api.nvim_buf_is_loaded(bufnr))
+    end)
+  end)
+
+  -- ─── stats ───────────────────────────────────────────────────────────────────
+
+  describe("stats", function()
+    local function stat_value(lines, label)
+      for _, l in ipairs(lines) do
+        local n = l:match(label .. "%s+(%d+)")
+        if n then return tonumber(n) end
+      end
+    end
+
+    it("opens a buffer with the stats header", function()
+      st.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.truthy(vim.tbl_contains(lines, "# Notes Statistics"))
+      assert.truthy(vim.tbl_contains(lines, "## Overview"))
+      assert.truthy(vim.tbl_contains(lines, "## Activity"))
+    end)
+
+    it("counts notes, open todos and done todos correctly", function()
+      write_file(dir .. "/20260514--note-a.md",  { "# A", "" })
+      write_file(dir .. "/20260514--note-b.md",  { "# B", "" })
+      write_file(dir .. "/20260514-O-todo.md",   { "# TODO", "" })
+      write_file(dir .. "/20260514-X-done.md",   { "# DONE", "" })
+      st.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.equal(4, stat_value(lines, "Total"))
+      assert.equal(2, stat_value(lines, "Notes"))
+      assert.equal(1, stat_value(lines, "Open todos"))
+      assert.equal(1, stat_value(lines, "Done todos"))
+    end)
+
+    it("counts unique tags", function()
+      write_file(dir .. "/20260514--a__foo_bar.md", { "# A", "" })
+      write_file(dir .. "/20260514--b__foo.md",     { "# B", "" })
+      st.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.equal(2, stat_value(lines, "Tags"))
+    end)
+
+    it("shows top tags sorted by frequency", function()
+      write_file(dir .. "/20260514--a__foo.md", { "# A", "" })
+      write_file(dir .. "/20260514--b__foo.md", { "# B", "" })
+      write_file(dir .. "/20260514--c__bar.md", { "# C", "" })
+      st.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.truthy(vim.tbl_contains(lines, "## Top Tags"))
+      local foo_count, bar_count
+      for _, l in ipairs(lines) do
+        local n = l:match("foo%s+(%d+)")
+        if n then foo_count = tonumber(n) end
+        n = l:match("bar%s+(%d+)")
+        if n then bar_count = tonumber(n) end
+      end
+      assert.equal(2, foo_count)
+      assert.equal(1, bar_count)
+    end)
+
+    it("omits Top Tags section when no notes have tags", function()
+      write_file(dir .. "/20260514--plain.md", { "# PLAIN", "" })
+      st.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.falsy(vim.tbl_contains(lines, "## Top Tags"))
+    end)
+
+    it("excludes templates from counts", function()
+      write_file(dir .. "/20260514--note.md", { "# NOTE", "" })
+      make_template("meeting", { "# Meeting", "" })
+      st.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.equal(1, stat_value(lines, "Total"))
+    end)
+
+    it("counts files created this month in the activity section", function()
+      local today = os.date("%Y%m%d")
+      write_file(dir .. "/" .. today .. "--fresh.md", { "# FRESH", "" })
+      write_file(dir .. "/20200101--old.md",          { "# OLD", "" })
+      st.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.equal(1, stat_value(lines, "This month"))
+    end)
+
+    it("has r and q keymaps bound on the buffer", function()
+      st.open()
+      local bufnr = vim.api.nvim_get_current_buf()
+      local keymaps = vim.api.nvim_buf_get_keymap(bufnr, "n")
+      local lhs_set = {}
+      for _, km in ipairs(keymaps) do lhs_set[km.lhs] = true end
+      assert.truthy(lhs_set["r"])
+      assert.truthy(lhs_set["q"])
+    end)
+
+    it("reuses the same buffer on repeated open calls", function()
+      st.open()
+      local bufnr1 = vim.api.nvim_get_current_buf()
+      vim.cmd("enew")
+      st.open()
+      assert.equal(bufnr1, vim.api.nvim_get_current_buf())
     end)
   end)
 
