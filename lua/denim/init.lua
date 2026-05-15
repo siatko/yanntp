@@ -124,6 +124,9 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimNewFromTemplate", notes.new_note_from_template, {
     desc = "Create a new note from a template",
   })
+  vim.api.nvim_create_user_command("DenimNewTemplate", notes.new_template, {
+    desc = "Create a new template",
+  })
   vim.api.nvim_create_user_command("DenimTemplates", function()
     require("denim.telescope").search_templates()
   end, { desc = "Browse and edit templates" })

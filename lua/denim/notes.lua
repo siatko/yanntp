@@ -63,6 +63,20 @@ local function open_path(path)
   end
 end
 
+function M.new_template()
+  local opts = get_opts()
+  local tmpl_dir = opts.notes_dir .. "/.templates"
+  vim.fn.mkdir(tmpl_dir, "p")
+  vim.ui.input({ prompt = "Template name: " }, function(name)
+    if not name or name == "" then return end
+    local filename = slugify_title(name) .. ".md"
+    local filepath = tmpl_dir .. "/" .. filename
+    vim.schedule(function()
+      vim.cmd("edit " .. vim.fn.fnameescape(filepath))
+    end)
+  end)
+end
+
 function M.new_note_from_template()
   local opts = get_opts()
 

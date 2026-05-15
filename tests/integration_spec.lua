@@ -789,6 +789,38 @@ describe("integration", function()
     end)
   end)
 
+  -- ─── new_template ────────────────────────────────────────────────────────────
+
+  describe("new_template", function()
+    it("opens a buffer for the slugified template path", function()
+      mock_input("meeting notes")
+      notes.new_template()
+      flush()
+      assert.equal(dir .. "/.templates/meeting-notes.md", vim.fn.expand("%:p"))
+    end)
+
+    it("creates the .templates directory when it does not exist", function()
+      assert.equal(0, vim.fn.isdirectory(dir .. "/.templates"))
+      mock_input("my template")
+      notes.new_template()
+      assert.equal(1, vim.fn.isdirectory(dir .. "/.templates"))
+    end)
+
+    it("slugifies special characters in the template name", function()
+      mock_input("Hello, World!")
+      notes.new_template()
+      flush()
+      assert.equal(dir .. "/.templates/hello-world.md", vim.fn.expand("%:p"))
+    end)
+
+    it("does nothing when name input is cancelled", function()
+      mock_input(nil)
+      notes.new_template()
+      flush()
+      assert.same({}, vim.fn.glob(dir .. "/.templates/*.md", false, true))
+    end)
+  end)
+
   -- ─── index ───────────────────────────────────────────────────────────────────
 
   describe("index", function()
