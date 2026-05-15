@@ -133,11 +133,10 @@ Every filename is built from four parts:
 
 ```
 20260514T143022--zettelkasten-intro__pkm_writing.md
-│               │ │             │    │
-│               │ │             │    └─ tags, separated by _
-│               │ │             └─ title slug, words separated by -
-│               │ └─ -- marks the start of the title
-│               └─ T separates date from time
+│       │      │                   │
+│       │      │                   └─ tags, separated by _
+│       │      └─ -- separates timestamp from title
+│       └─ T separates date from time
 └─ YYYYMMDDTHHMMSS — unique timestamp, sorts chronologically
 ```
 
