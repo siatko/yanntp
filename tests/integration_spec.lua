@@ -776,6 +776,112 @@ describe("integration", function()
     end)
   end)
 
+  -- ─── template tab stops ──────────────────────────────────────────────────────
+
+  describe("template tab stops", function()
+    it("places cursor at the first $ and removes it from the buffer", function()
+      local tmpl = make_template("form", { "## Topic: $", "", "## Notes" })
+      mock_template(tmpl)
+      mock_input("my meeting")
+      mock_tags({})
+      notes.new_note_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--my-meeting.md"
+      wait_for(expected)
+      flush()
+      local cursor = vim.api.nvim_win_get_cursor(0)
+      assert.equal(3, cursor[1])   -- line 3: "## Topic: $"
+      assert.equal(10, cursor[2])  -- col 10 (0-based), right where $ was
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.equal("## Topic: ", lines[3])
+    end)
+
+    it("sets a buffer-local insert-mode Tab keymap when stops exist", function()
+      local tmpl = make_template("two-stops", { "Name: $", "Date: $" })
+      mock_template(tmpl)
+      mock_input("my form")
+      mock_tags({})
+      notes.new_note_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--my-form.md"
+      wait_for(expected)
+      flush()
+      local bufnr = vim.api.nvim_get_current_buf()
+      local keymaps = vim.api.nvim_buf_get_keymap(bufnr, "i")
+      local has_tab = false
+      for _, km in ipairs(keymaps) do
+        if km.lhs == "<Tab>" then has_tab = true; break end
+      end
+      assert.truthy(has_tab)
+    end)
+
+    it("Tab advances cursor to the next stop", function()
+      local tmpl = make_template("advance", { "Name: $", "Date: $" })
+      mock_template(tmpl)
+      mock_input("advance")
+      mock_tags({})
+      notes.new_note_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--advance.md"
+      wait_for(expected)
+      flush()
+      local bufnr = vim.api.nvim_get_current_buf()
+      local tab_fn
+      for _, km in ipairs(vim.api.nvim_buf_get_keymap(bufnr, "i")) do
+        if km.lhs == "<Tab>" then tab_fn = km.callback; break end
+      end
+      assert.truthy(tab_fn, "Tab keymap not set")
+      tab_fn()
+      local cursor = vim.api.nvim_win_get_cursor(0)
+      assert.equal(4, cursor[1])  -- line 4: "Date: $"
+      assert.equal(6, cursor[2])  -- col 6, right where $ was
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.equal("Name: ", lines[3])
+      assert.equal("Date: ", lines[4])
+    end)
+
+    it("removes the Tab keymap after the last stop is consumed", function()
+      local tmpl = make_template("single-stop", { "Field: $" })
+      mock_template(tmpl)
+      mock_input("single stop")
+      mock_tags({})
+      notes.new_note_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--single-stop.md"
+      wait_for(expected)
+      flush()
+      local bufnr = vim.api.nvim_get_current_buf()
+      local tab_fn
+      for _, km in ipairs(vim.api.nvim_buf_get_keymap(bufnr, "i")) do
+        if km.lhs == "<Tab>" then tab_fn = km.callback; break end
+      end
+      assert.truthy(tab_fn, "Tab keymap should exist before last stop is consumed")
+      tab_fn()
+      local keymaps = vim.api.nvim_buf_get_keymap(bufnr, "i")
+      local has_tab = false
+      for _, km in ipairs(keymaps) do
+        if km.lhs == "<Tab>" then has_tab = true; break end
+      end
+      assert.falsy(has_tab)
+    end)
+
+    it("falls back to line 2 col 0 and sets no Tab keymap when template has no stops", function()
+      local tmpl = make_template("plain", { "Just plain content" })
+      mock_template(tmpl)
+      mock_input("no stops")
+      mock_tags({})
+      notes.new_note_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--no-stops.md"
+      wait_for(expected)
+      flush()
+      local cursor = vim.api.nvim_win_get_cursor(0)
+      assert.equal(2, cursor[1])
+      assert.equal(0, cursor[2])
+      local bufnr = vim.api.nvim_get_current_buf()
+      local has_tab = false
+      for _, km in ipairs(vim.api.nvim_buf_get_keymap(bufnr, "i")) do
+        if km.lhs == "<Tab>" then has_tab = true; break end
+      end
+      assert.falsy(has_tab)
+    end)
+  end)
+
   -- ─── search_templates ─────────────────────────────────────────────────────────
 
   describe("search_templates", function()

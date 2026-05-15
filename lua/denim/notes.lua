@@ -49,6 +49,41 @@ function M.new_note()
   end)
 end
 
+local function find_and_remove_stop(bufnr)
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  for i, line in ipairs(lines) do
+    local col = line:find("%$")
+    if col then
+      vim.api.nvim_buf_set_lines(bufnr, i - 1, i, false, { line:sub(1, col - 1) .. line:sub(col + 1) })
+      vim.api.nvim_win_set_cursor(0, { i, col - 1 })
+      return true
+    end
+  end
+  return false
+end
+
+local function activate_tab_stops(bufnr)
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local has_stop = false
+  for _, line in ipairs(lines) do
+    if line:find("%$") then has_stop = true; break end
+  end
+
+  if not has_stop then
+    vim.api.nvim_win_set_cursor(0, { 2, 0 })
+    vim.cmd("startinsert")
+    return
+  end
+
+  find_and_remove_stop(bufnr)
+  vim.cmd("startinsert")
+  vim.keymap.set("i", "<Tab>", function()
+    if not find_and_remove_stop(bufnr) then
+      vim.keymap.del("i", "<Tab>", { buffer = bufnr })
+    end
+  end, { buffer = bufnr })
+end
+
 local function open_path(path)
   local current_dir = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h")
   local target = vim.fn.fnamemodify(current_dir .. "/" .. path, ":p")
@@ -112,8 +147,7 @@ function M.new_note_from_template()
           vim.fn.writefile(lines, filepath)
           vim.cmd("edit " .. vim.fn.fnameescape(filepath))
           vim.schedule(function()
-            vim.api.nvim_win_set_cursor(0, { 2, 0 })
-            vim.cmd("startinsert")
+            activate_tab_stops(vim.api.nvim_get_current_buf())
           end)
         end)
       end)

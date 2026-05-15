@@ -27,7 +27,7 @@
 - **Tag picker** - Telescope UI with multi-select and inline tag creation
 - **Tag search** - browse all tags across your notes and filter by one or more
 - **Tag rename** - rename a tag across all notes in one step; all affected files and backlinks updated automatically
-- **Templates** - create notes from `.md` files in `notes_dir/.templates/`; templates are excluded from all search results
+- **Templates** - create notes from `.md` files in `notes_dir/.templates/`; place `$` in a template for cursor stops - Tab steps through each one; templates are excluded from all search results
 - **Full-text search** - live grep across all note contents
 - **Note linking** - insert markdown links to other notes, follow links with `<CR>`
 - **Backlinks** - find all notes that link to the current note
@@ -153,6 +153,18 @@ When creating a note or todo, a Telescope picker appears after entering the titl
 `<leader>ngs` opens a search picker: selecting one or more tags filters to notes that carry all of them.
 
 `<leader>ntn` opens a template picker showing all `.md` files from `notes_dir/.templates/`. After selecting, the usual title and tag prompts follow. The template's body is used as the note's initial content; an H1 heading in the template is replaced by the generated title. Templates are never shown in note search or content grep results. If `.templates/` is empty or missing, denim notifies and bails. Create a new template with `<leader>ntN` (prompts for a name, opens a blank buffer in `.templates/`). Browse and edit existing templates with `<leader>nte`.
+
+Place `$` anywhere in a template to mark cursor stops. When the note opens, the cursor lands on the first `$` (which is deleted) in insert mode. Press `<Tab>` to jump to each subsequent `$`. Once all stops are visited `<Tab>` returns to its normal behavior.
+
+```
+## Meeting: $
+
+Attendees: $
+
+## Action items
+
+- $
+```
 
 `<leader>ngr` opens a single-select tag picker. After selecting a tag, enter a new name and every file carrying that tag is renamed and every backlink pointing to any of those files is rewritten. A notification reports how many files were renamed and how many link references were updated.
 
