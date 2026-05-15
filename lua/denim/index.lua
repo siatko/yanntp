@@ -87,6 +87,18 @@ function M.open()
   if bufnr == -1 then
     bufnr = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_name(bufnr, bufname)
+
+    vim.keymap.set("n", "<CR>", function()
+      require("denim.notes").follow_link()
+    end, { buffer = bufnr, desc = "denim: follow link" })
+
+    vim.keymap.set("n", "r", function()
+      M.open()
+    end, { buffer = bufnr, desc = "denim: refresh index" })
+
+    vim.keymap.set("n", "q", "<cmd>bdelete<cr>", {
+      buffer = bufnr, desc = "denim: close index",
+    })
   end
 
   vim.api.nvim_set_option_value("buftype",  "nofile", { buf = bufnr })
@@ -98,18 +110,6 @@ function M.open()
 
   vim.api.nvim_set_current_buf(bufnr)
   vim.api.nvim_win_set_cursor(0, { 1, 0 })
-
-  vim.keymap.set("n", "<CR>", function()
-    require("denim.notes").follow_link()
-  end, { buffer = bufnr, desc = "denim: follow link" })
-
-  vim.keymap.set("n", "r", function()
-    M.open()
-  end, { buffer = bufnr, desc = "denim: refresh index" })
-
-  vim.keymap.set("n", "q", "<cmd>bdelete<cr>", {
-    buffer = bufnr, desc = "denim: close index",
-  })
 end
 
 return M

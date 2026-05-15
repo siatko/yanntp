@@ -274,8 +274,6 @@ function M.pick_tags(callback, opts)
   local pre_selected = opts.pre_selected or {}
   local all_tags     = collect_tags(get_opts().notes_dir)
 
-  table.sort(all_tags)
-
   local pickers      = require("telescope.pickers")
   local finders      = require("telescope.finders")
   local conf         = require("telescope.config").values

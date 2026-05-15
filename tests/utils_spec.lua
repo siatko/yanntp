@@ -28,6 +28,10 @@ describe("slugify_title", function()
   it("handles mixed case and symbols", function()
     assert.equal("fix-login-bug", utils.slugify_title("Fix Login Bug!"))
   end)
+
+  it("returns empty string for all-special-character input", function()
+    assert.equal("", utils.slugify_title("!!!"))
+  end)
 end)
 
 describe("slugify_tag", function()
@@ -75,6 +79,10 @@ describe("tags_from_filename", function()
 
   it("returns empty table for filename with no extension match", function()
     assert.same({}, utils.tags_from_filename("notanotefile.txt"))
+  end)
+
+  it("handles datetime-format filenames", function()
+    assert.same({ "lua" }, utils.tags_from_filename("20260515T143022--my-note__lua.md"))
   end)
 end)
 
@@ -211,5 +219,9 @@ describe("find_link_path", function()
   it("returns the only link on a line regardless of cursor position", function()
     assert.equal("note.md", utils.find_link_path("- [ ] [My Note](note.md)", 1))
     assert.equal("note.md", utils.find_link_path("- [ ] [My Note](note.md)", 3))
+  end)
+
+  it("returns path from image link syntax", function()
+    assert.equal("diagram.png", utils.find_link_path("see ![Diagram](diagram.png) here", 6))
   end)
 end)

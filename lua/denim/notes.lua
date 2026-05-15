@@ -10,10 +10,6 @@ local slugify_tag        = utils.slugify_tag
 local tags_from_filename = utils.tags_from_filename
 local resolve_slug       = utils.resolve_slug
 
-local function uppercase(s)
-  return s:upper()
-end
-
 function M.new_note()
   local opts = get_opts()
 
@@ -35,11 +31,7 @@ function M.new_note()
           return
         end
 
-        local f = io.open(filepath, "w")
-        if f then
-          f:write("# " .. uppercase(name) .. "\n\n")
-          f:close()
-        end
+        vim.fn.writefile({ "# " .. name:upper(), "" }, filepath)
         vim.cmd("edit " .. vim.fn.fnameescape(filepath))
         vim.schedule(function()
           vim.api.nvim_win_set_cursor(0, { 2, 0 })
@@ -140,7 +132,7 @@ function M.new_note_from_template()
           if tmpl_lines[1] and tmpl_lines[1]:match("^#%s") then
             body_start = (tmpl_lines[2] == "") and 3 or 2
           end
-          local lines = { "# " .. uppercase(name), "" }
+          local lines = { "# " .. name:upper(), "" }
           for i = body_start, #tmpl_lines do
             table.insert(lines, tmpl_lines[i])
           end
@@ -187,11 +179,7 @@ function M.new_todo()
           return
         end
 
-        local f = io.open(filepath, "w")
-        if f then
-          f:write("# " .. uppercase(name) .. "\n\n")
-          f:close()
-        end
+        vim.fn.writefile({ "# " .. name:upper(), "" }, filepath)
         vim.cmd("edit " .. vim.fn.fnameescape(filepath))
         vim.schedule(function()
           vim.api.nvim_win_set_cursor(0, { 2, 0 })
@@ -222,6 +210,7 @@ function M.todo_done()
   local new_filepath = vim.fn.fnamemodify(filepath, ":h") .. "/" .. new_filename
 
   vim.fn.rename(filepath, new_filepath)
+  require("denim.telescope").update_links_to(filepath, new_filepath)
   vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
   vim.notify("denim: done — " .. new_filename, vim.log.levels.INFO)
 end
@@ -274,7 +263,7 @@ function M.refactor()
 
         local lines = vim.fn.readfile(new_filepath)
         if name ~= "" and lines and lines[1] and lines[1]:match("^#%s") then
-          lines[1] = "# " .. uppercase(name)
+          lines[1] = "# " .. name:upper()
           vim.fn.writefile(lines, new_filepath)
         end
 

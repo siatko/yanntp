@@ -219,6 +219,18 @@ describe("integration", function()
       assert.equal(1, vim.fn.filereadable(tmp))
       vim.fn.delete(tmp)
     end)
+
+    it("updates backlinks when marking done", function()
+      local path   = dir .. "/20260514-O-fix-bug.md"
+      local linker = dir .. "/20260514--linker.md"
+      write_file(path,   { "# FIX BUG", "" })
+      write_file(linker, { "# LINKER", "", "see [Fix Bug](20260514-O-fix-bug.md)" })
+      open_buf(path)
+      notes.todo_done()
+      local line = vim.fn.readfile(linker)[3]
+      assert.truthy(line:find("20260514-X-fix-bug.md", 1, true))
+      assert.falsy(line:find("20260514-O-fix-bug.md", 1, true))
+    end)
   end)
 
   -- ─── follow_link ─────────────────────────────────────────────────────────────
