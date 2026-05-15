@@ -4,19 +4,19 @@
    o   o   o   o   o
   ___________________
  |                   |
- |  20260514T143022  |
- |  --note__pkm.md   |     denim.nvim
+ | 20260514T143022-- |
+ | my-note__pkm.md   |     denim.nvim
  |                   |
- |  # MY NOTE        |
- |                   |
- |  _______________  |
- |  _______________  |
+ |  # MY NOTE        |   no database.
+ |                   |   no frontmatter.
+ |  _______________  |   just a really
+ |  _______________  |   long filename.
  |  _______          |
  |                   |
  |___________________|
 ```
 
-> A [Denote](https://github.com/protesilaos/denote)-inspired note-taking plugin for Neovim.
+> A [Denote](https://protesilaos.com/emacs/denote)-inspired note-taking plugin for Neovim.
 > Plain markdown files, structured filenames, no database, no proprietary formats.
 
 ## Features
@@ -127,24 +127,36 @@ require("denim").setup({
 
 ## File Naming
 
-Filenames encode date, title, status and tags - no frontmatter required. Everything lives flat in `notes_dir`.
+denim follows the [Denote](https://protesilaos.com/emacs/denote) file naming convention, pioneered by Protesilaos Stavrou for Emacs. The core idea: **the filename is the metadata**. No frontmatter, no database, no proprietary format - just a name you can grep, sort, move, or open with any editor on any OS, forever.
+
+Every filename is built from four parts:
+
+```
+20260514T143022--zettelkasten-intro__pkm_writing.md
+│               │ │             │    │
+│               │ │             │    └─ tags, separated by _
+│               │ │             └─ title slug, words separated by -
+│               │ └─ -- marks the start of the title
+│               └─ T separates date from time
+└─ YYYYMMDDTHHMMSS — unique timestamp, sorts chronologically
+```
+
+The timestamp makes every note unique even if you create two with the same title. The double-dash `--` and double-underscore `__` separators are unambiguous delimiters that survive any shell quoting, URL encoding, or overzealous autocorrect.
 
 **Notes**
 ```
-YYYYMMDDTHHMMSS--title-slug__tag1_tag2.md
 20260514T143022--zettelkasten-intro__pkm_writing.md
+20260514T161500--meeting-notes.md
 ```
 
-**Todos**
+**Todos** — status lives between the timestamp and the title
 ```
-YYYYMMDDTHHMMSS-O-title-slug__tag1_tag2.md   (open)
-YYYYMMDDTHHMMSS-X-title-slug__tag1_tag2.md   (done)
-20260514T143022-O-fix-login-bug__backend.md
+20260514T143022-O-fix-login-bug__backend.md   (open)
+20260514T143022-X-fix-login-bug__backend.md   (done)
 ```
 
 **Attachments**
 ```
-YYYYMMDDTHHMMSS--name.ext
 20260514T143022--architecture-diagram.png
 ```
 
