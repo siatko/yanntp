@@ -468,6 +468,17 @@ describe("integration", function()
       wait_for(new)
       assert.equal(0, vim.fn.filereadable(orig))
       assert.equal(1, vim.fn.filereadable(new))
+    end)
+
+    it("preserves heading when name is empty but tags change", function()
+      local orig = dir .. "/20260514--my-note__old.md"
+      write_file(orig, { "# MY NOTE", "" })
+      open_buf(orig)
+      mock_input("")
+      mock_tags({ "new" })
+      notes.refactor()
+      local new = dir .. "/20260514--my-note__new.md"
+      wait_for(new)
       assert.equal("# MY NOTE", vim.fn.readfile(new)[1])
     end)
 
