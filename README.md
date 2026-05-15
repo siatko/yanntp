@@ -144,7 +144,7 @@ When creating a note or todo, a Telescope picker appears after entering the titl
 
 `<leader>nt` opens a search picker: selecting one or more tags filters to notes that carry all of them.
 
-`<leader>nN` opens a template picker showing all `.md` files from `notes_dir/.templates/`. After selecting, the usual title and tag prompts follow. The template's body is used as the note's initial content; an H1 heading in the template is replaced by the generated title. Templates are never shown in note search or content grep results. If `.templates/` is empty or missing, denim notifies and bails. Create and edit templates with `<leader>ne`.
+`<leader>nN` opens a template picker showing all `.md` files from `notes_dir/.templates/`. After selecting, the usual title and tag prompts follow. The template's body is used as the note's initial content; an H1 heading in the template is replaced by the generated title. Templates are never shown in note search or content grep results. If `.templates/` is empty or missing, denim notifies and bails. Create a new template with `:DenimNewTemplate` (prompts for a name, opens a blank buffer in `.templates/`). Browse and edit existing templates with `<leader>ne`.
 
 `<leader>nR` opens a single-select tag picker. After selecting a tag, enter a new name and every file carrying that tag is renamed and every backlink pointing to any of those files is rewritten. A notification reports how many files were renamed and how many link references were updated.
 
@@ -209,6 +209,7 @@ When creating a note or todo, a Telescope picker appears after entering the titl
 |---|---|
 | `:DenimNew` | New note |
 | `:DenimNewFromTemplate` | New note from template |
+| `:DenimNewTemplate` | Create a new template |
 | `:DenimSearch` | Find notes by filename |
 | `:DenimSearchContent` | Search note contents |
 | `:DenimTags` | Search tags |
