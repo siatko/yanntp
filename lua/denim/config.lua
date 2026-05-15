@@ -19,6 +19,7 @@ M.defaults = {
     done_todos = "<leader>nTx",
     todo_done = "<leader>nTd",
     open_index = "<leader>ni",
+    open_stats = "<leader>nS",
   },
 }
 

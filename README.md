@@ -34,6 +34,7 @@
 - **Refactor** - rename and retag the current note in one step; all linking notes updated automatically
 - **Image paste** - paste clipboard images via img-clip, saved as `YYYYMMDD--name__tags.ext`
 - **Notes index** - virtual buffer listing all notes grouped by date with status indicators
+- **Statistics** - note counts, todo counts, tag usage and monthly activity at a glance
 
 ## Requirements
 
@@ -86,6 +87,7 @@ require("denim").setup({
     done_todos        = "<leader>nTx",
     todo_done         = "<leader>nTd",
     open_index        = "<leader>ni",
+    open_stats        = "<leader>nS",
   },
 })
 ```
@@ -110,6 +112,7 @@ require("denim").setup({
 | `<leader>nTx` | List done todos |
 | `<leader>nTd` | Mark current todo as done |
 | `<leader>ni` | Open notes index |
+| `<leader>nS` | Open notes statistics |
 | `<CR>` | Follow markdown link (inside note files) |
 
 ## File Naming
@@ -168,6 +171,38 @@ When creating a note or todo, a Telescope picker appears after entering the titl
 | `r` | Refresh the index |
 | `q` | Close the index |
 
+## Statistics
+
+`<leader>nS` (or `:DenimStats`) opens a virtual buffer with an overview of your notes:
+
+```
+# Notes Statistics
+
+## Overview
+
+  Total          42
+  Notes          27
+  Open todos      7
+  Done todos      8
+  Tags           23
+
+## Activity
+
+  This month      8
+  Last month     14
+
+## Top Tags
+
+  pkm            12
+  writing         8
+  backend         6
+```
+
+| Key | Action |
+|---|---|
+| `r` | Refresh |
+| `q` | Close |
+
 ## User Commands
 
 | Command | Action |
@@ -188,6 +223,7 @@ When creating a note or todo, a Telescope picker appears after entering the titl
 | `:DenimDoneTodos` | List done todos |
 | `:DenimTodoDone` | Mark current todo as done |
 | `:DenimIndex` | Open notes index |
+| `:DenimStats` | Open notes statistics |
 
 ## Development
 

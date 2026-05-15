@@ -88,6 +88,11 @@ function M.setup(opts)
         require("denim.index").open()
       end, { desc = "denim: open notes index" })
     end
+    if keymaps.open_stats then
+      vim.keymap.set("n", keymaps.open_stats, function()
+        require("denim.stats").open()
+      end, { desc = "denim: open notes statistics" })
+    end
   end
 
   local notes_dir = require("denim.config").options.notes_dir
@@ -152,6 +157,9 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimIndex", function()
     require("denim.index").open()
   end, { desc = "Open notes index" })
+  vim.api.nvim_create_user_command("DenimStats", function()
+    require("denim.stats").open()
+  end, { desc = "Open notes statistics" })
 end
 
 return M
