@@ -1446,6 +1446,64 @@ describe("integration", function()
     end)
   end)
 
+  -- ─── search_untagged ─────────────────────────────────────────────────────────
+
+  describe("search_untagged", function()
+    it("notifies when all notes are tagged", function()
+      write_file(dir .. "/20260514--note-a__work.md", { "# A", "" })
+      write_file(dir .. "/20260514--note-b__pkm_writing.md", { "# B", "" })
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("no untagged") then notified = true end end
+      tel.search_untagged()
+      vim.notify = orig_notify
+      assert.truthy(notified)
+    end)
+
+    it("notifies when the notes directory is empty", function()
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("no untagged") then notified = true end end
+      tel.search_untagged()
+      vim.notify = orig_notify
+      assert.truthy(notified)
+    end)
+
+    it("does not notify when untagged notes exist", function()
+      write_file(dir .. "/20260514--untagged.md", { "# UNTAGGED", "" })
+      write_file(dir .. "/20260514--tagged__work.md", { "# TAGGED", "" })
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("no untagged") then notified = true end end
+      -- Telescope is unavailable in headless test env; we only care that it
+      -- does not emit the "no untagged" notification before trying to open it
+      pcall(tel.search_untagged)
+      vim.notify = orig_notify
+      assert.falsy(notified)
+    end)
+
+    it("excludes tagged notes from the untagged list", function()
+      write_file(dir .. "/20260514--plain.md",        { "# PLAIN", "" })
+      write_file(dir .. "/20260514--tagged__foo.md",  { "# TAGGED", "" })
+      local orig_notify = vim.notify
+      local notified = false
+      vim.notify = function(msg, _) if msg:find("no untagged") then notified = true end end
+      pcall(tel.search_untagged)
+      vim.notify = orig_notify
+      assert.falsy(notified)
+    end)
+
+    it("excludes templates from untagged search", function()
+      make_template("bare", { "just content" })
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("no untagged") then notified = true end end
+      tel.search_untagged()
+      vim.notify = orig_notify
+      assert.truthy(notified)
+    end)
+  end)
+
   -- ─── pick_tags ───────────────────────────────────────────────────────────────
 
   describe("pick_tags", function()

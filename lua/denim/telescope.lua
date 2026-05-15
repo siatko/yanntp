@@ -518,6 +518,42 @@ function M.rename_tag()
   }):find()
 end
 
+function M.search_untagged()
+  local notes_dir = get_opts().notes_dir
+  local files = {}
+  for _, filepath in ipairs(all_note_files(notes_dir)) do
+    if #tags_from_filename(vim.fn.fnamemodify(filepath, ":t")) == 0 then
+      table.insert(files, filepath)
+    end
+  end
+
+  if #files == 0 then
+    vim.notify("denim: no untagged notes found", vim.log.levels.INFO)
+    return
+  end
+
+  local pickers = require("telescope.pickers")
+  local finders = require("telescope.finders")
+  local conf    = require("telescope.config").values
+
+  pickers.new({}, {
+    prompt_title = "Untagged Notes",
+    finder = finders.new_table({
+      results = files,
+      entry_maker = function(entry)
+        return {
+          value   = entry,
+          display = vim.fn.fnamemodify(entry, ":~:."),
+          ordinal = entry,
+          path    = entry,
+        }
+      end,
+    }),
+    sorter    = conf.generic_sorter({}),
+    previewer = conf.file_previewer({}),
+  }):find()
+end
+
 function M.search_tags()
   local notes_dir = get_opts().notes_dir
   local all_tags = collect_tags(notes_dir)

@@ -43,6 +43,11 @@ function M.setup(opts)
         require("denim.telescope").search_tags()
       end, { desc = "denim: search tags" })
     end
+    if keymaps.search_untagged then
+      vim.keymap.set("n", keymaps.search_untagged, function()
+        require("denim.telescope").search_untagged()
+      end, { desc = "denim: search untagged notes" })
+    end
     if keymaps.rename_tag then
       vim.keymap.set("n", keymaps.rename_tag, function()
         require("denim.telescope").rename_tag()
@@ -155,6 +160,9 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimTags", function()
     require("denim.telescope").search_tags()
   end, { desc = "Search tags in notes" })
+  vim.api.nvim_create_user_command("DenimUntagged", function()
+    require("denim.telescope").search_untagged()
+  end, { desc = "List notes without tags" })
   vim.api.nvim_create_user_command("DenimRenameTag", function()
     require("denim.telescope").rename_tag()
   end, { desc = "Rename a tag across all notes" })

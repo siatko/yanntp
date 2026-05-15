@@ -14,6 +14,7 @@ M.defaults = {
     new_template      = "<leader>ntN",
     search_templates  = "<leader>nte",
     search_tags       = "<leader>ngs",
+    search_untagged   = "<leader>ngu",
     rename_tag        = "<leader>ngr",
     new_todo          = "<leader>nxn",
     open_todos        = "<leader>nxo",

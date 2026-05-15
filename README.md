@@ -86,6 +86,7 @@ require("denim").setup({
     search_templates  = "<leader>nte",
     -- tags
     search_tags       = "<leader>ngs",
+    search_untagged   = "<leader>ngu",
     rename_tag        = "<leader>ngr",
     -- todos
     new_todo          = "<leader>nxn",
@@ -114,6 +115,7 @@ require("denim").setup({
 | `<leader>ntN` | New template |
 | `<leader>nte` | Browse and edit templates |
 | `<leader>ngs` | Browse and search tags |
+| `<leader>ngu` | List notes without any tags |
 | `<leader>ngr` | Rename a tag across all notes |
 | `<leader>nxn` | New todo |
 | `<leader>nxo` | List open todos |
@@ -165,6 +167,8 @@ Attendees: $
 
 - $
 ```
+
+`<leader>ngu` opens a picker listing all notes that have no tags - useful for a quick tagging pass.
 
 `<leader>ngr` opens a single-select tag picker. After selecting a tag, enter a new name and every file carrying that tag is renamed and every backlink pointing to any of those files is rewritten. A notification reports how many files were renamed and how many link references were updated.
 
@@ -235,6 +239,7 @@ Attendees: $
 | `:DenimSearchContent` | Search note contents |
 | `:DenimTags` | Search tags |
 | `:DenimTemplates` | Browse and edit templates |
+| `:DenimUntagged` | List notes without tags |
 | `:DenimRenameTag` | Rename a tag across all notes |
 | `:DenimInsertLink` | Insert link to another note |
 | `:DenimBacklinks` | Show backlinks to current note |
