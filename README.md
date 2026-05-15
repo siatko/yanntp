@@ -208,4 +208,4 @@ Tests cover pure helpers in `utils.lua`, the index line builder in `index.lua`, 
 ## TODO
 
 - [ ] Refactor from a link - run refactor while the cursor is on a `[title](path)` link in any note, not only when the target file is the active buffer
-- [ ] Integration tests for rename_tag
+- [x] Integration tests for rename_tag
