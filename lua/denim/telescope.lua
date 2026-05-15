@@ -17,9 +17,9 @@ end
 
 local function find_cmd()
   if vim.fn.executable("fd") == 1 then
-    return { "fd", "--type", "f", "--extension", "md" }
+    return { "fd", "--type", "f", "--extension", "md", "--exclude", ".templates" }
   end
-  return { "find", ".", "-name", "*.md" }
+  return { "find", ".", "-name", "*.md", "-not", "-path", "*/.templates/*" }
 end
 
 function M.search_notes()
@@ -40,7 +40,7 @@ function M.search_content()
   t.live_grep({
     prompt_title = "Notes Content",
     cwd = get_opts().notes_dir,
-    additional_args = { "--glob", "*.md" },
+    additional_args = { "--glob", "*.md", "--glob", "!.templates/**" },
   })
 end
 
@@ -348,6 +348,76 @@ function M.pick_tags(callback, opts)
       return true
     end,
   }):find()
+end
+
+local function template_files(notes_dir)
+  return vim.fn.glob(notes_dir .. "/.templates/*.md", false, true)
+end
+
+function M.pick_template(callback)
+  local notes_dir = get_opts().notes_dir
+  local tmpls     = template_files(notes_dir)
+
+  if #tmpls == 0 then
+    vim.notify(
+      "denim: no templates found; add .md files to " .. notes_dir .. "/.templates",
+      vim.log.levels.INFO
+    )
+    return
+  end
+
+  local pickers      = require("telescope.pickers")
+  local finders      = require("telescope.finders")
+  local conf         = require("telescope.config").values
+  local actions      = require("telescope.actions")
+  local action_state = require("telescope.actions.state")
+
+  local entries = vim.tbl_map(function(path)
+    return { path = path, name = vim.fn.fnamemodify(path, ":t:r") }
+  end, tmpls)
+
+  pickers.new({}, {
+    prompt_title = "Choose template",
+    finder = finders.new_table({
+      results = entries,
+      entry_maker = function(e)
+        return { value = e, display = e.name, ordinal = e.name, path = e.path }
+      end,
+    }),
+    sorter    = conf.generic_sorter({}),
+    previewer = conf.file_previewer({}),
+    attach_mappings = function(prompt_bufnr)
+      actions.select_default:replace(function()
+        local entry = action_state.get_selected_entry()
+        if not entry then return end
+        actions.close(prompt_bufnr)
+        vim.schedule(function() callback(entry.value.path) end)
+      end)
+      return true
+    end,
+  }):find()
+end
+
+function M.search_templates()
+  local notes_dir = get_opts().notes_dir
+  local tmpls     = template_files(notes_dir)
+
+  if #tmpls == 0 then
+    vim.notify(
+      "denim: no templates found; add .md files to " .. notes_dir .. "/.templates",
+      vim.log.levels.INFO
+    )
+    return
+  end
+
+  local t = get_telescope()
+  if not t then return end
+
+  t.find_files({
+    prompt_title = "Templates",
+    cwd          = notes_dir .. "/.templates",
+    find_command = { "find", notes_dir .. "/.templates", "-maxdepth", "1", "-name", "*.md" },
+  })
 end
 
 function M.list_open_todos()

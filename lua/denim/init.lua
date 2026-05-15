@@ -13,6 +13,16 @@ function M.setup(opts)
         desc = "denim: new note",
       })
     end
+    if keymaps.new_from_template then
+      vim.keymap.set("n", keymaps.new_from_template, notes.new_note_from_template, {
+        desc = "denim: new note from template",
+      })
+    end
+    if keymaps.search_templates then
+      vim.keymap.set("n", keymaps.search_templates, function()
+        require("denim.telescope").search_templates()
+      end, { desc = "denim: browse and edit templates" })
+    end
     if keymaps.search_notes then
       vim.keymap.set("n", keymaps.search_notes, function()
         require("denim.telescope").search_notes()
@@ -106,6 +116,12 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimNew", notes.new_note, {
     desc = "Create a new note in inbox",
   })
+  vim.api.nvim_create_user_command("DenimNewFromTemplate", notes.new_note_from_template, {
+    desc = "Create a new note from a template",
+  })
+  vim.api.nvim_create_user_command("DenimTemplates", function()
+    require("denim.telescope").search_templates()
+  end, { desc = "Browse and edit templates" })
   vim.api.nvim_create_user_command("DenimSearch", function()
     require("denim.telescope").search_notes()
   end, { desc = "Search notes by filename" })

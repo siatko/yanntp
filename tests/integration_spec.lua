@@ -7,18 +7,21 @@ describe("integration", function()
   local dir
   local orig_ui_input
   local orig_pick_tags
+  local orig_pick_template
 
   before_each(function()
     dir = vim.fn.tempname()
     vim.fn.mkdir(dir, "p")
     config.setup({ notes_dir = dir })
-    orig_ui_input = vim.ui.input
-    orig_pick_tags = tel.pick_tags
+    orig_ui_input     = vim.ui.input
+    orig_pick_tags    = tel.pick_tags
+    orig_pick_template = tel.pick_template
   end)
 
   after_each(function()
-    vim.ui.input = orig_ui_input
-    tel.pick_tags = orig_pick_tags
+    vim.ui.input      = orig_ui_input
+    tel.pick_tags     = orig_pick_tags
+    tel.pick_template = orig_pick_template
     for _, buf in ipairs(vim.api.nvim_list_bufs()) do
       local name = vim.api.nvim_buf_get_name(buf)
       if name ~= "" and name:find(dir, 1, true) then
@@ -54,6 +57,16 @@ describe("integration", function()
   -- let scheduled callbacks run without waiting for a specific file
   local function flush()
     vim.wait(200, function() return false end, 10)
+  end
+
+  local function mock_template(path)
+    tel.pick_template = function(cb) cb(path) end
+  end
+
+  local function make_template(name, lines)
+    vim.fn.mkdir(dir .. "/.templates", "p")
+    write_file(dir .. "/.templates/" .. name .. ".md", lines)
+    return dir .. "/.templates/" .. name .. ".md"
   end
 
   -- ─── new_note ────────────────────────────────────────────────────────────────
@@ -593,6 +606,146 @@ describe("integration", function()
       local orig_notify = vim.notify
       vim.notify = function(msg, _) if msg:find("no tags") then notified = true end end
       tel.search_tags()
+      vim.notify = orig_notify
+      assert.truthy(notified)
+    end)
+  end)
+
+  -- ─── pick_template ───────────────────────────────────────────────────────────
+
+  describe("pick_template", function()
+    local saved = {}
+    local telescope_modules = {
+      "telescope.pickers", "telescope.finders",
+      "telescope.config", "telescope.actions", "telescope.actions.state",
+    }
+
+    before_each(function()
+      for _, mod in ipairs(telescope_modules) do saved[mod] = package.loaded[mod] end
+    end)
+
+    after_each(function()
+      for _, mod in ipairs(telescope_modules) do package.loaded[mod] = saved[mod] end
+    end)
+
+    it("notifies when no templates exist", function()
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("no templates") then notified = true end end
+      tel.pick_template(function() end)
+      vim.notify = orig_notify
+      assert.truthy(notified)
+    end)
+
+    it("calls callback with the selected template path", function()
+      local tmpl = make_template("meeting", { "## Attendees", "", "## Action Items" })
+      local received
+      package.loaded["telescope.actions"] = {
+        select_default = { replace = function(_, fn)
+          vim.schedule(fn)
+        end },
+        close = function() end,
+      }
+      package.loaded["telescope.actions.state"] = {
+        get_selected_entry = function()
+          return { value = { path = tmpl, name = "meeting" } }
+        end,
+      }
+      package.loaded["telescope.pickers"] = {
+        new = function(_, opts)
+          return { find = function() opts.attach_mappings(1, function() end) end }
+        end,
+      }
+      package.loaded["telescope.finders"] = { new_table = function() return {} end }
+      package.loaded["telescope.config"]  = {
+        values = { generic_sorter = function() return {} end, file_previewer = function() return {} end },
+      }
+
+      tel.pick_template(function(path) received = path end)
+      vim.wait(200, function() return received ~= nil end, 10)
+      assert.equal(tmpl, received)
+    end)
+  end)
+
+  -- ─── new_note_from_template ───────────────────────────────────────────────────
+
+  describe("new_note_from_template", function()
+    it("notifies when no templates exist", function()
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("no templates") then notified = true end end
+      tel.pick_template(function() end)
+      vim.notify = orig_notify
+      assert.truthy(notified)
+    end)
+
+    it("creates file with template body below the generated title", function()
+      local tmpl = make_template("meeting", { "## Attendees", "", "## Action Items" })
+      mock_template(tmpl)
+      mock_input("team sync")
+      mock_tags({})
+      notes.new_note_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--team-sync.md"
+      wait_for(expected)
+      local lines = vim.fn.readfile(expected)
+      assert.equal("# TEAM SYNC", lines[1])
+      assert.equal("## Attendees", lines[3])
+      assert.equal("## Action Items", lines[5])
+    end)
+
+    it("skips an H1 heading in the template", function()
+      local tmpl = make_template("daily", { "# Daily Note", "", "## Log" })
+      mock_template(tmpl)
+      mock_input("monday")
+      mock_tags({})
+      notes.new_note_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--monday.md"
+      wait_for(expected)
+      local lines = vim.fn.readfile(expected)
+      assert.equal("# MONDAY", lines[1])
+      assert.equal("## Log", lines[3])
+    end)
+
+    it("applies tags to the filename", function()
+      local tmpl = make_template("note", { "some content" })
+      mock_template(tmpl)
+      mock_input("my note")
+      mock_tags({ "work", "alpha" })
+      notes.new_note_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--my-note__alpha_work.md"
+      wait_for(expected)
+    end)
+
+    it("does nothing when name input is cancelled", function()
+      local tmpl = make_template("note", { "content" })
+      mock_template(tmpl)
+      mock_input(nil)
+      notes.new_note_from_template()
+      flush()
+      assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
+    end)
+
+    it("opens existing file without overwriting when name collides", function()
+      local existing = dir .. "/" .. os.date("%Y%m%d") .. "--sync.md"
+      write_file(existing, { "# SYNC", "", "original content" })
+      local tmpl = make_template("meeting", { "## Attendees" })
+      mock_template(tmpl)
+      mock_input("sync")
+      mock_tags({})
+      notes.new_note_from_template()
+      wait_for(existing)
+      assert.equal("original content", vim.fn.readfile(existing)[3])
+    end)
+  end)
+
+  -- ─── search_templates ─────────────────────────────────────────────────────────
+
+  describe("search_templates", function()
+    it("notifies when no templates exist", function()
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("no templates") then notified = true end end
+      tel.search_templates()
       vim.notify = orig_notify
       assert.truthy(notified)
     end)

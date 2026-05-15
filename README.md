@@ -27,6 +27,7 @@
 - **Tag picker** - Telescope UI with multi-select and inline tag creation
 - **Tag search** - browse all tags across your notes and filter by one or more
 - **Tag rename** - rename a tag across all notes in one step; all affected files and backlinks updated automatically
+- **Templates** - create notes from `.md` files in `notes_dir/.templates/`; templates are excluded from all search results
 - **Full-text search** - live grep across all note contents
 - **Note linking** - insert markdown links to other notes, follow links with `<CR>`
 - **Backlinks** - find all notes that link to the current note
@@ -69,20 +70,22 @@ require("denim").setup({
   notes_dir = "~/notes",
 
   keymaps = {
-    new_note       = "<leader>nn",
-    search_notes   = "<leader>nf",
-    search_content = "<leader>ns",
-    search_tags    = "<leader>nt",
-    rename_tag     = "<leader>nR",
-    insert_link    = "<leader>nl",
-    backlinks      = "<leader>nb",
-    paste_image    = "<leader>np",
-    refactor       = "<leader>nr",
-    new_todo       = "<leader>nTn",
-    open_todos     = "<leader>nTo",
-    done_todos     = "<leader>nTx",
-    todo_done      = "<leader>nTd",
-    open_index     = "<leader>ni",
+    new_note          = "<leader>nn",
+    new_from_template = "<leader>nN",
+    search_notes      = "<leader>nf",
+    search_content    = "<leader>ns",
+    search_tags       = "<leader>nt",
+    search_templates  = "<leader>ne",
+    rename_tag        = "<leader>nR",
+    insert_link       = "<leader>nl",
+    backlinks         = "<leader>nb",
+    paste_image       = "<leader>np",
+    refactor          = "<leader>nr",
+    new_todo          = "<leader>nTn",
+    open_todos        = "<leader>nTo",
+    done_todos        = "<leader>nTx",
+    todo_done         = "<leader>nTd",
+    open_index        = "<leader>ni",
   },
 })
 ```
@@ -92,9 +95,11 @@ require("denim").setup({
 | Key | Action |
 |---|---|
 | `<leader>nn` | New note |
+| `<leader>nN` | New note from template |
 | `<leader>nf` | Find note by filename |
 | `<leader>ns` | Search note contents (live grep) |
 | `<leader>nt` | Browse and search tags |
+| `<leader>ne` | Browse and edit templates |
 | `<leader>nR` | Rename a tag across all notes |
 | `<leader>nl` | Insert link to another note |
 | `<leader>nb` | Show backlinks to current note |
@@ -136,6 +141,8 @@ When creating a note or todo, a Telescope picker appears after entering the titl
 
 `<leader>nt` opens a search picker: selecting one or more tags filters to notes that carry all of them.
 
+`<leader>nN` opens a template picker showing all `.md` files from `notes_dir/.templates/`. After selecting, the usual title and tag prompts follow. The template's body is used as the note's initial content; an H1 heading in the template is replaced by the generated title. Templates are never shown in note search or content grep results. If `.templates/` is empty or missing, denim notifies and bails. Create and edit templates with `<leader>ne`.
+
 `<leader>nR` opens a single-select tag picker. After selecting a tag, enter a new name and every file carrying that tag is renamed and every backlink pointing to any of those files is rewritten. A notification reports how many files were renamed and how many link references were updated.
 
 ## Notes Index
@@ -166,9 +173,11 @@ When creating a note or todo, a Telescope picker appears after entering the titl
 | Command | Action |
 |---|---|
 | `:DenimNew` | New note |
+| `:DenimNewFromTemplate` | New note from template |
 | `:DenimSearch` | Find notes by filename |
 | `:DenimSearchContent` | Search note contents |
 | `:DenimTags` | Search tags |
+| `:DenimTemplates` | Browse and edit templates |
 | `:DenimRenameTag` | Rename a tag across all notes |
 | `:DenimInsertLink` | Insert link to another note |
 | `:DenimBacklinks` | Show backlinks to current note |

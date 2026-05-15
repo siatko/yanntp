@@ -63,6 +63,50 @@ local function open_path(path)
   end
 end
 
+function M.new_note_from_template()
+  local opts = get_opts()
+
+  require("denim.telescope").pick_template(function(tmpl_path)
+    vim.ui.input({ prompt = "Note name: " }, function(name)
+      if not name or name == "" then return end
+      vim.schedule(function()
+        require("denim.telescope").pick_tags(function(tags)
+          local date    = os.date("%Y%m%d")
+          local slug    = slugify_title(name)
+          local slugged = vim.tbl_map(slugify_tag, tags)
+          table.sort(slugged)
+          local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
+          local filename   = date .. "--" .. slug .. tag_suffix .. ".md"
+          local filepath   = opts.notes_dir .. "/" .. filename
+
+          if vim.fn.filereadable(filepath) == 1 then
+            vim.notify("denim: note already exists, opening: " .. filename, vim.log.levels.INFO)
+            vim.cmd("edit " .. vim.fn.fnameescape(filepath))
+            return
+          end
+
+          local tmpl_lines = vim.fn.readfile(tmpl_path)
+          local body_start = 1
+          if tmpl_lines[1] and tmpl_lines[1]:match("^#%s") then
+            body_start = (tmpl_lines[2] == "") and 3 or 2
+          end
+          local lines = { "# " .. uppercase(name), "" }
+          for i = body_start, #tmpl_lines do
+            table.insert(lines, tmpl_lines[i])
+          end
+
+          vim.fn.writefile(lines, filepath)
+          vim.cmd("edit " .. vim.fn.fnameescape(filepath))
+          vim.schedule(function()
+            vim.api.nvim_win_set_cursor(0, { 2, 0 })
+            vim.cmd("startinsert")
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
 function M.follow_link()
   local line = vim.api.nvim_get_current_line()
   local col  = vim.api.nvim_win_get_cursor(0)[2] + 1
