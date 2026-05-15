@@ -40,6 +40,7 @@
 
 - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
 - [img-clip.nvim](https://github.com/HakonHarnes/img-clip.nvim) (optional, for image paste)
+- [which-key.nvim](https://github.com/folke/which-key.nvim) (optional, for keymap group labels)
 - `ripgrep` (for content search)
 - `find` (for file listing)
 

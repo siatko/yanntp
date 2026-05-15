@@ -100,6 +100,17 @@ function M.setup(opts)
     end
   end
 
+  local ok, wk = pcall(require, "which-key")
+  if ok then
+    wk.add({
+      { "<leader>n",  group = "notes" },
+      { "<leader>nt", group = "templates" },
+      { "<leader>ng", group = "tags" },
+      { "<leader>nx", group = "todos" },
+      { "<leader>nv", group = "views" },
+    })
+  end
+
   local notes_dir = require("denim.config").options.notes_dir
   vim.api.nvim_create_augroup("denim", { clear = true })
   vim.api.nvim_create_autocmd("BufEnter", {
