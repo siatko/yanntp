@@ -28,6 +28,11 @@ function M.setup(opts)
         require("denim.telescope").search_tags()
       end, { desc = "denim: search tags" })
     end
+    if keymaps.rename_tag then
+      vim.keymap.set("n", keymaps.rename_tag, function()
+        require("denim.telescope").rename_tag()
+      end, { desc = "denim: rename tag across all notes" })
+    end
     if keymaps.paste_image then
       vim.keymap.set("n", keymaps.paste_image, notes.paste_image, {
         desc = "denim: paste image from clipboard",
@@ -110,6 +115,9 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimTags", function()
     require("denim.telescope").search_tags()
   end, { desc = "Search tags in notes" })
+  vim.api.nvim_create_user_command("DenimRenameTag", function()
+    require("denim.telescope").rename_tag()
+  end, { desc = "Rename a tag across all notes" })
   vim.api.nvim_create_user_command("DenimPasteImage", notes.paste_image, {
     desc = "Paste image from clipboard",
   })

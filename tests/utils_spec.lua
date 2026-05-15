@@ -100,6 +100,56 @@ describe("relative_path", function()
   end)
 end)
 
+describe("rename_tag_in_filename", function()
+  it("renames a single tag", function()
+    local f, ok = utils.rename_tag_in_filename("20260101--note__foo.md", "foo", "bar")
+    assert.is_true(ok)
+    assert.equal("20260101--note__bar.md", f)
+  end)
+
+  it("renames one tag among many, keeps others sorted", function()
+    local f, ok = utils.rename_tag_in_filename("20260101--note__apple_foo_zebra.md", "foo", "mango")
+    assert.is_true(ok)
+    assert.equal("20260101--note__apple_mango_zebra.md", f)
+  end)
+
+  it("returns false when tag is not present", function()
+    local f, ok = utils.rename_tag_in_filename("20260101--note__foo.md", "bar", "baz")
+    assert.is_false(ok)
+    assert.equal("20260101--note__foo.md", f)
+  end)
+
+  it("returns false for filename with no tags", function()
+    local f, ok = utils.rename_tag_in_filename("20260101--note.md", "foo", "bar")
+    assert.is_false(ok)
+    assert.equal("20260101--note.md", f)
+  end)
+
+  it("removes tag when new_tag is empty string", function()
+    local f, ok = utils.rename_tag_in_filename("20260101--note__foo_bar.md", "foo", "")
+    assert.is_true(ok)
+    assert.equal("20260101--note__bar.md", f)
+  end)
+
+  it("drops tag section entirely when last tag is removed", function()
+    local f, ok = utils.rename_tag_in_filename("20260101--note__foo.md", "foo", "")
+    assert.is_true(ok)
+    assert.equal("20260101--note.md", f)
+  end)
+
+  it("deduplicates when new tag already exists", function()
+    local f, ok = utils.rename_tag_in_filename("20260101--note__bar_foo.md", "foo", "bar")
+    assert.is_true(ok)
+    assert.equal("20260101--note__bar.md", f)
+  end)
+
+  it("works with todo filenames", function()
+    local f, ok = utils.rename_tag_in_filename("20260101-O-fix-bug__backend_foo.md", "foo", "ops")
+    assert.is_true(ok)
+    assert.equal("20260101-O-fix-bug__backend_ops.md", f)
+  end)
+end)
+
 describe("find_link_path", function()
   local line = "see [Alpha](alpha.md) and [Beta](beta.md) for details"
 

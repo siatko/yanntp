@@ -43,6 +43,28 @@ function M.relative_path(from_dir, to_file)
   return #parts > 0 and table.concat(parts, "/") or "."
 end
 
+function M.rename_tag_in_filename(filename, old_tag, new_tag)
+  local base     = filename:match("^(.-)__[^%.]+%.md$")
+  local tag_part = filename:match("__([^%.]+)%.md$")
+  if not tag_part then return filename, false end
+
+  local tags, seen = {}, {}
+  local found = false
+  for tag in tag_part:gmatch("[^_]+") do
+    local t = (tag == old_tag) and new_tag or tag
+    found = found or (tag == old_tag)
+    if t ~= "" and not seen[t] then
+      seen[t] = true
+      table.insert(tags, t)
+    end
+  end
+
+  if not found then return filename, false end
+  table.sort(tags)
+  local suffix = #tags > 0 and ("__" .. table.concat(tags, "_")) or ""
+  return base .. suffix .. ".md", true
+end
+
 function M.find_link_path(line, col)
   local nearest_path, nearest_dist = nil, math.huge
   local pos = 1

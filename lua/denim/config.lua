@@ -7,6 +7,7 @@ M.defaults = {
     search_notes = "<leader>nf",
     search_content = "<leader>ns",
     search_tags = "<leader>nt",
+    rename_tag  = "<leader>nR",
     paste_image = "<leader>np",
     insert_link = "<leader>nl",
     backlinks   = "<leader>nb",
