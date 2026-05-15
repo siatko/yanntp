@@ -101,6 +101,13 @@ describe("integration", function()
       local expected = dir .. "/" .. os.date("%Y%m%d") .. "--hello-world.md"
       wait_for(expected)
     end)
+
+    it("does nothing when name input is cancelled", function()
+      mock_input(nil)
+      notes.new_note()
+      flush()
+      assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
+    end)
   end)
 
   -- ─── new_todo ────────────────────────────────────────────────────────────────
@@ -139,6 +146,13 @@ describe("integration", function()
       notes.new_todo()
       wait_for(path)
       assert.equal("keep this content", vim.fn.readfile(path)[3])
+    end)
+
+    it("does nothing when name input is cancelled", function()
+      mock_input(nil)
+      notes.new_todo()
+      flush()
+      assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
     end)
   end)
 
@@ -219,6 +233,15 @@ describe("integration", function()
       vim.notify = orig_notify
       assert.truthy(warned)
       assert.equal(source, vim.fn.expand("%:p"))
+    end)
+
+    it("does nothing when there is no link on the current line", function()
+      local path = dir .. "/20260514--no-links.md"
+      write_file(path, { "# NO LINKS", "", "just plain text here" })
+      open_buf(path)
+      vim.api.nvim_win_set_cursor(0, { 3, 5 })
+      notes.follow_link()
+      assert.equal(path, vim.fn.expand("%:p"))
     end)
   end)
 
@@ -384,6 +407,44 @@ describe("integration", function()
       wait_for(new)
       assert.equal(0, vim.fn.filereadable(orig))
       assert.equal(1, vim.fn.filereadable(new))
+    end)
+
+    it("does nothing when name input is cancelled", function()
+      local orig = dir .. "/20260514--my-note.md"
+      write_file(orig, { "# MY NOTE", "" })
+      open_buf(orig)
+      mock_input(nil)
+      notes.refactor()
+      flush()
+      assert.equal(1, vim.fn.filereadable(orig))
+    end)
+
+    it("preserves current slug when name input is empty", function()
+      local orig = dir .. "/20260514--my-note__old.md"
+      write_file(orig, { "# MY NOTE", "" })
+      open_buf(orig)
+      mock_input("")
+      mock_tags({ "new" })
+      notes.refactor()
+      local new = dir .. "/20260514--my-note__new.md"
+      wait_for(new)
+      assert.equal(0, vim.fn.filereadable(orig))
+      assert.equal(1, vim.fn.filereadable(new))
+    end)
+
+    it("renames without modifying content when there is no H1 heading", function()
+      local orig = dir .. "/20260514--no-heading.md"
+      write_file(orig, { "some content", "second line" })
+      open_buf(orig)
+      mock_input("renamed")
+      mock_tags({})
+      notes.refactor()
+      local new = dir .. "/20260514--renamed.md"
+      wait_for(new)
+      assert.equal(0, vim.fn.filereadable(orig))
+      local content = vim.fn.readfile(new)
+      assert.equal("some content", content[1])
+      assert.equal("second line", content[2])
     end)
   end)
 
@@ -622,6 +683,79 @@ describe("integration", function()
     end)
   end)
 
+  -- ─── insert_link ─────────────────────────────────────────────────────────────
+
+  describe("insert_link", function()
+    local saved = {}
+    local telescope_modules = {
+      "telescope.pickers", "telescope.finders",
+      "telescope.config", "telescope.actions", "telescope.actions.state",
+    }
+
+    before_each(function()
+      for _, mod in ipairs(telescope_modules) do
+        saved[mod] = package.loaded[mod]
+      end
+    end)
+
+    after_each(function()
+      for _, mod in ipairs(telescope_modules) do
+        package.loaded[mod] = saved[mod]
+      end
+    end)
+
+    it("inserts a markdown link to the selected note at the cursor position", function()
+      local target = dir .. "/20260514--target.md"
+      local source = dir .. "/20260514--source.md"
+      write_file(target, { "# TARGET NOTE", "" })
+      write_file(source, { "# SOURCE", "", "see " })
+      open_buf(source)
+      vim.api.nvim_win_set_cursor(0, { 3, 3 })
+
+      local enter_fn
+      package.loaded["telescope.actions"] = {
+        select_default = { replace = function(_, fn) enter_fn = fn end },
+        close          = function() end,
+      }
+      package.loaded["telescope.actions.state"] = {
+        get_selected_entry = function()
+          return { value = { path = target, title = "TARGET NOTE" } }
+        end,
+      }
+      package.loaded["telescope.pickers"] = {
+        new = function(_, opts)
+          return { find = function() opts.attach_mappings(1, function() end) end }
+        end,
+      }
+      package.loaded["telescope.finders"] = { new_table = function() return {} end }
+      package.loaded["telescope.config"]  = {
+        values = {
+          generic_sorter = function() return {} end,
+          file_previewer = function() return {} end,
+        },
+      }
+
+      tel.insert_link()
+      assert.truthy(enter_fn, "select_default handler was not registered")
+      enter_fn()
+      flush()
+
+      local line = vim.api.nvim_buf_get_lines(0, 2, 3, false)[1]
+      assert.truthy(line:find("[TARGET NOTE]", 1, true))
+      assert.truthy(line:find("20260514--target.md", 1, true))
+    end)
+
+    it("warns when no file is open", function()
+      vim.cmd("enew")
+      local warned = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
+      tel.insert_link()
+      vim.notify = orig_notify
+      assert.truthy(warned)
+    end)
+  end)
+
   -- ─── pick_tags ───────────────────────────────────────────────────────────────
 
   describe("pick_tags", function()
@@ -643,40 +777,99 @@ describe("integration", function()
       end
     end)
 
-    it("calls callback with {} when user deselects all pre-selected tags and confirms", function()
-      local enter_fn
-
+    local function setup_mock(opts)
+      local handles = {}
       package.loaded["telescope.actions"] = {
-        select_default   = { replace = function(_, fn) enter_fn = fn end },
+        select_default   = { replace = function(_, fn) handles.enter = fn end },
         close            = function() end,
         toggle_selection = function() end,
       }
       package.loaded["telescope.actions.state"] = {
         get_current_picker = function()
           return {
-            get_multi_selection = function() return {} end,
+            get_multi_selection = function() return opts.multi or {} end,
             manager             = { num_results = function() return 0 end, get_entry = function() return nil end },
             selection_row       = 1,
             move_selection      = function() end,
           }
         end,
-        get_current_line = function() return "" end,
+        get_current_line = function() return opts.prompt or "" end,
       }
       package.loaded["telescope.pickers"] = {
-        new = function(_, opts)
-          return { find = function() opts.attach_mappings(1, function() end) end }
+        new = function(_, picker_opts)
+          return {
+            find = function()
+              local function map(mode, key, fn)
+                if mode == "n" and key == "<Esc>" then handles.escape = fn end
+              end
+              picker_opts.attach_mappings(1, map)
+            end,
+          }
         end,
       }
       package.loaded["telescope.finders"] = { new_table = function() return {} end }
       package.loaded["telescope.config"]  = { values = { generic_sorter = function() return {} end } }
+      return handles
+    end
 
+    it("calls callback with {} when user deselects all pre-selected tags and confirms", function()
+      local h = setup_mock({ multi = {}, prompt = "" })
       local result
       tel.pick_tags(function(tags) result = tags end, { pre_selected = { "foo", "bar" } })
-
-      assert.truthy(enter_fn, "select_default handler was not registered")
-      enter_fn()
+      assert.truthy(h.enter, "select_default handler was not registered")
+      h.enter()
       vim.wait(200, function() return result ~= nil end, 10)
       assert.same({}, result)
+    end)
+
+    it("calls callback with pre_selected when user presses Escape", function()
+      local h = setup_mock({ multi = {}, prompt = "" })
+      local result
+      tel.pick_tags(function(tags) result = tags end, { pre_selected = { "foo", "bar" } })
+      assert.truthy(h.escape, "Escape handler was not registered")
+      h.escape()
+      vim.wait(200, function() return result ~= nil end, 10)
+      assert.same({ "foo", "bar" }, result)
+    end)
+
+    it("calls callback with multi-selected items", function()
+      local h = setup_mock({ multi = { { value = "lua" }, { value = "nvim" } }, prompt = "" })
+      local result
+      tel.pick_tags(function(tags) result = tags end, {})
+      assert.truthy(h.enter)
+      h.enter()
+      vim.wait(200, function() return result ~= nil end, 10)
+      assert.same({ "lua", "nvim" }, result)
+    end)
+
+    it("calls callback with typed tag when nothing is multi-selected", function()
+      local h = setup_mock({ multi = {}, prompt = "newtag" })
+      local result
+      tel.pick_tags(function(tags) result = tags end, {})
+      assert.truthy(h.enter)
+      h.enter()
+      vim.wait(200, function() return result ~= nil end, 10)
+      assert.same({ "newtag" }, result)
+    end)
+
+    it("does not duplicate typed tag when it matches a multi-selected item", function()
+      local h = setup_mock({ multi = { { value = "lua" } }, prompt = "lua" })
+      local result
+      tel.pick_tags(function(tags) result = tags end, {})
+      assert.truthy(h.enter)
+      h.enter()
+      vim.wait(200, function() return result ~= nil end, 10)
+      assert.same({ "lua" }, result)
+    end)
+
+    it("includes both multi-selected and typed tag when they differ", function()
+      local h = setup_mock({ multi = { { value = "lua" } }, prompt = "nvim" })
+      local result
+      tel.pick_tags(function(tags) result = tags end, {})
+      assert.truthy(h.enter)
+      h.enter()
+      vim.wait(200, function() return result ~= nil end, 10)
+      assert.same({ "lua", "nvim" }, result)
     end)
   end)
 end)
