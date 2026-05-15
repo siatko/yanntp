@@ -26,9 +26,9 @@ local function gather_stats(notes_dir)
     local filename = vim.fn.fnamemodify(filepath, ":t")
     local date_raw = filename:match("^(%d%d%d%d%d%d%d%d)")
     if date_raw then
-      if filename:match("^%d+%-O%-") then
+      if filename:match("^%d+T?%d*%-O%-") then
         stats.open_todos = stats.open_todos + 1
-      elseif filename:match("^%d+%-X%-") then
+      elseif filename:match("^%d+T?%d*%-X%-") then
         stats.done_todos = stats.done_todos + 1
       else
         stats.notes = stats.notes + 1

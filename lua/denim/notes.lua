@@ -20,7 +20,7 @@ function M.new_note()
     if not name or name == "" then return end
     vim.schedule(function()
       require("denim.telescope").pick_tags(function(tags)
-        local date = os.date("%Y%m%d")
+        local date = os.date("%Y%m%dT%H%M%S")
         local slug = slugify_title(name)
         local slugged = vim.tbl_map(slugify_tag, tags)
         table.sort(slugged)
@@ -120,7 +120,7 @@ function M.new_note_from_template()
       if not name or name == "" then return end
       vim.schedule(function()
         require("denim.telescope").pick_tags(function(tags)
-          local date    = os.date("%Y%m%d")
+          local date    = os.date("%Y%m%dT%H%M%S")
           local slug    = slugify_title(name)
           local slugged = vim.tbl_map(slugify_tag, tags)
           table.sort(slugged)
@@ -172,7 +172,7 @@ function M.new_todo()
     if not name or name == "" then return end
     vim.schedule(function()
       require("denim.telescope").pick_tags(function(tags)
-        local date = os.date("%Y%m%d")
+        local date = os.date("%Y%m%dT%H%M%S")
         local slug = slugify_title(name)
         local slugged = vim.tbl_map(slugify_tag, tags)
         table.sort(slugged)
@@ -244,7 +244,7 @@ function M.refactor()
 
   -- Split base into date+marker prefix and slug
   -- Formats: YYYYMMDD--slug  /  YYYYMMDD-O-slug  /  YYYYMMDD-X-slug
-  local date_and_marker = base:match("^(%d+%-[OX]%-)") or base:match("^(%d+%-%-)")
+  local date_and_marker = base:match("^(%d+T?%d*%-[OX]%-)") or base:match("^(%d+T?%d*%-%-)")
   local current_slug    = date_and_marker and base:sub(#date_and_marker + 1) or base
 
   local file_lines  = vim.fn.readfile(filepath, "", 1)
@@ -301,7 +301,7 @@ function M.paste_image()
     if not name or name == "" then return end
     vim.schedule(function()
       require("denim.telescope").pick_tags(function(tags)
-        local date = os.date("%Y%m%d")
+        local date = os.date("%Y%m%dT%H%M%S")
         local slugged = vim.tbl_map(slugify_tag, tags)
         table.sort(slugged)
         local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""

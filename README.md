@@ -4,8 +4,8 @@
    o   o   o   o   o
   ___________________
  |                   |
- |  20260514--       |
- |  my-note__pkm.md  |     denim.nvim
+ |  20260514T143022  |
+ |  --note__pkm.md   |     denim.nvim
  |                   |
  |  # MY NOTE        |
  |                   |
@@ -22,7 +22,7 @@
 ## Features
 
 - **Flat structure** - all notes, todos and attachments live in one directory
-- **Denote-style filenames** - `YYYYMMDD--title__tag1_tag2.md`
+- **Denote-style filenames** - `YYYYMMDDTHHMMSS--title__tag1_tag2.md`
 - **Todo tracking** - open (`-O-`) and done (`-X-`) status embedded in filename
 - **Tag picker** - Telescope UI with multi-select and inline tag creation
 - **Tag search** - browse all tags across your notes and filter by one or more
@@ -131,21 +131,21 @@ Filenames encode date, title, status and tags - no frontmatter required. Everyth
 
 **Notes**
 ```
-YYYYMMDD--title-slug__tag1_tag2.md
-20260514--zettelkasten-intro__pkm_writing.md
+YYYYMMDDTHHMMSS--title-slug__tag1_tag2.md
+20260514T143022--zettelkasten-intro__pkm_writing.md
 ```
 
 **Todos**
 ```
-YYYYMMDD-O-title-slug__tag1_tag2.md   (open)
-YYYYMMDD-X-title-slug__tag1_tag2.md   (done)
-20260514-O-fix-login-bug__backend.md
+YYYYMMDDTHHMMSS-O-title-slug__tag1_tag2.md   (open)
+YYYYMMDDTHHMMSS-X-title-slug__tag1_tag2.md   (done)
+20260514T143022-O-fix-login-bug__backend.md
 ```
 
 **Attachments**
 ```
-YYYYMMDD--name.ext
-20260514--architecture-diagram.png
+YYYYMMDDTHHMMSS--name.ext
+20260514T143022--architecture-diagram.png
 ```
 
 ## Tag Workflow

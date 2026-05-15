@@ -15,9 +15,9 @@ local function gather_notes(notes_dir)
     local date_raw = filename:match("^(%d%d%d%d%d%d%d%d)")
     if date_raw then
       local status = "note"
-      if filename:match("^%d+%-O%-") then
+      if filename:match("^%d+T?%d*%-O%-") then
         status = "open_todo"
-      elseif filename:match("^%d+%-X%-") then
+      elseif filename:match("^%d+T?%d*%-X%-") then
         status = "done_todo"
       end
 

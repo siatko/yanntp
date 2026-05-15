@@ -77,7 +77,7 @@ describe("integration", function()
       mock_input("my test note")
       mock_tags({ "lua", "nvim" })
       notes.new_note()
-      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--my-test-note__lua_nvim.md"
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--my-test-note__lua_nvim.md"
       wait_for(expected)
       assert.equal("# MY TEST NOTE", vim.fn.readfile(expected)[1])
     end)
@@ -86,7 +86,7 @@ describe("integration", function()
       mock_input("sorted")
       mock_tags({ "zebra", "alpha" })
       notes.new_note()
-      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--sorted__alpha_zebra.md"
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--sorted__alpha_zebra.md"
       wait_for(expected)
     end)
 
@@ -94,12 +94,12 @@ describe("integration", function()
       mock_input("no tags note")
       mock_tags({})
       notes.new_note()
-      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--no-tags-note.md"
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--no-tags-note.md"
       wait_for(expected)
     end)
 
     it("opens existing file without overwriting it", function()
-      local path = dir .. "/" .. os.date("%Y%m%d") .. "--existing-note.md"
+      local path = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--existing-note.md"
       write_file(path, { "# EXISTING NOTE", "", "keep this content" })
       mock_input("existing note")
       mock_tags({})
@@ -112,7 +112,7 @@ describe("integration", function()
       mock_input("Hello, World!")
       mock_tags({})
       notes.new_note()
-      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--hello-world.md"
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--hello-world.md"
       wait_for(expected)
     end)
 
@@ -131,7 +131,7 @@ describe("integration", function()
       mock_input("fix the bug")
       mock_tags({ "backend" })
       notes.new_todo()
-      local expected = dir .. "/" .. os.date("%Y%m%d") .. "-O-fix-the-bug__backend.md"
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-fix-the-bug__backend.md"
       wait_for(expected)
       assert.equal("# FIX THE BUG", vim.fn.readfile(expected)[1])
     end)
@@ -140,7 +140,7 @@ describe("integration", function()
       mock_input("plain todo")
       mock_tags({})
       notes.new_todo()
-      local expected = dir .. "/" .. os.date("%Y%m%d") .. "-O-plain-todo.md"
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-plain-todo.md"
       wait_for(expected)
     end)
 
@@ -148,12 +148,12 @@ describe("integration", function()
       mock_input("tagged todo")
       mock_tags({ "work", "backend", "urgent" })
       notes.new_todo()
-      local expected = dir .. "/" .. os.date("%Y%m%d") .. "-O-tagged-todo__backend_urgent_work.md"
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-tagged-todo__backend_urgent_work.md"
       wait_for(expected)
     end)
 
     it("opens existing todo without overwriting it", function()
-      local path = dir .. "/" .. os.date("%Y%m%d") .. "-O-existing-todo.md"
+      local path = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-existing-todo.md"
       write_file(path, { "# EXISTING TODO", "", "keep this content" })
       mock_input("existing todo")
       mock_tags({})
@@ -723,7 +723,7 @@ describe("integration", function()
       mock_input("team sync")
       mock_tags({})
       notes.new_note_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--team-sync.md"
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--team-sync.md"
       wait_for(expected)
       local lines = vim.fn.readfile(expected)
       assert.equal("# TEAM SYNC", lines[1])
@@ -737,7 +737,7 @@ describe("integration", function()
       mock_input("monday")
       mock_tags({})
       notes.new_note_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--monday.md"
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--monday.md"
       wait_for(expected)
       local lines = vim.fn.readfile(expected)
       assert.equal("# MONDAY", lines[1])
@@ -750,7 +750,7 @@ describe("integration", function()
       mock_input("my note")
       mock_tags({ "work", "alpha" })
       notes.new_note_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--my-note__alpha_work.md"
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--my-note__alpha_work.md"
       wait_for(expected)
     end)
 
@@ -764,7 +764,7 @@ describe("integration", function()
     end)
 
     it("opens existing file without overwriting when name collides", function()
-      local existing = dir .. "/" .. os.date("%Y%m%d") .. "--sync.md"
+      local existing = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--sync.md"
       write_file(existing, { "# SYNC", "", "original content" })
       local tmpl = make_template("meeting", { "## Attendees" })
       mock_template(tmpl)
@@ -785,7 +785,7 @@ describe("integration", function()
       mock_input("my meeting")
       mock_tags({})
       notes.new_note_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--my-meeting.md"
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--my-meeting.md"
       wait_for(expected)
       flush()
       local cursor = vim.api.nvim_win_get_cursor(0)
@@ -801,7 +801,7 @@ describe("integration", function()
       mock_input("my form")
       mock_tags({})
       notes.new_note_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--my-form.md"
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--my-form.md"
       wait_for(expected)
       flush()
       local bufnr = vim.api.nvim_get_current_buf()
@@ -819,7 +819,7 @@ describe("integration", function()
       mock_input("advance")
       mock_tags({})
       notes.new_note_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--advance.md"
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--advance.md"
       wait_for(expected)
       flush()
       local bufnr = vim.api.nvim_get_current_buf()
@@ -843,7 +843,7 @@ describe("integration", function()
       mock_input("single stop")
       mock_tags({})
       notes.new_note_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--single-stop.md"
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--single-stop.md"
       wait_for(expected)
       flush()
       local bufnr = vim.api.nvim_get_current_buf()
@@ -867,7 +867,7 @@ describe("integration", function()
       mock_input("no stops")
       mock_tags({})
       notes.new_note_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%d") .. "--no-stops.md"
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--no-stops.md"
       wait_for(expected)
       flush()
       local cursor = vim.api.nvim_win_get_cursor(0)
@@ -1085,7 +1085,7 @@ describe("integration", function()
     end)
 
     it("counts files created this month in the activity section", function()
-      local today = os.date("%Y%m%d")
+      local today = os.date("%Y%m%dT%H%M%S")
       write_file(dir .. "/" .. today .. "--fresh.md", { "# FRESH", "" })
       write_file(dir .. "/20200101--old.md",          { "# OLD", "" })
       st.open()
