@@ -193,6 +193,7 @@ When creating a note or todo, a Telescope picker appears after entering the titl
   Open todos      7
   Done todos      8
   Tags           23
+  Linked         18  (43%)
 
 ## Activity
 
