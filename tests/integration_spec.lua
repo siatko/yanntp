@@ -1004,6 +1004,43 @@ describe("integration", function()
       st.open()
       assert.equal(bufnr1, vim.api.nvim_get_current_buf())
     end)
+
+    it("counts notes with at least one outgoing link", function()
+      write_file(dir .. "/20260514--linked.md",   { "# LINKED", "", "see [Other](20260514--other.md)" })
+      write_file(dir .. "/20260514--other.md",    { "# OTHER", "" })
+      write_file(dir .. "/20260514--unlinked.md", { "# UNLINKED", "" })
+      st.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.equal(1, stat_value(lines, "Linked"))
+    end)
+
+    it("shows linked percentage in the overview", function()
+      write_file(dir .. "/20260514--a.md", { "# A", "", "[B](20260514--b.md)" })
+      write_file(dir .. "/20260514--b.md", { "# B", "", "[A](20260514--a.md)" })
+      write_file(dir .. "/20260514--c.md", { "# C", "" })
+      write_file(dir .. "/20260514--d.md", { "# D", "" })
+      st.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      local linked_line
+      for _, l in ipairs(lines) do
+        if l:find("Linked", 1, true) then linked_line = l; break end
+      end
+      assert.truthy(linked_line)
+      assert.truthy(linked_line:find("2", 1, true))
+      assert.truthy(linked_line:find("50%%"))
+    end)
+
+    it("shows 0%% when no notes have links", function()
+      write_file(dir .. "/20260514--plain.md", { "# PLAIN", "" })
+      st.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      local linked_line
+      for _, l in ipairs(lines) do
+        if l:find("Linked", 1, true) then linked_line = l; break end
+      end
+      assert.truthy(linked_line)
+      assert.truthy(linked_line:find("0%%"))
+    end)
   end)
 
   -- ─── insert_link ─────────────────────────────────────────────────────────────

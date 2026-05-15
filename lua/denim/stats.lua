@@ -19,7 +19,7 @@ local function gather_stats(notes_dir)
   local stats = {
     notes = 0, open_todos = 0, done_todos = 0,
     this_month = 0, last_month = 0,
-    tags = {},
+    tags = {}, linked = 0,
   }
 
   for _, filepath in ipairs(all) do
@@ -47,6 +47,12 @@ local function gather_stats(notes_dir)
     end
   end
 
+  if #all > 0 then
+    local cmd = { "grep", "-l", "](", "--" }
+    for _, f in ipairs(all) do table.insert(cmd, f) end
+    stats.linked = #vim.fn.systemlist(cmd)
+  end
+
   return stats
 end
 
@@ -68,6 +74,11 @@ local function build_lines(stats)
     return string.format("  %-14s %d", label, n)
   end
 
+  local function row_pct(label, n, denom)
+    local pct = denom > 0 and math.floor(n / denom * 100 + 0.5) or 0
+    return string.format("  %-14s %d  (%d%%)", label, n, pct)
+  end
+
   local lines = {
     "# Notes Statistics", "",
     "## Overview", "",
@@ -76,6 +87,7 @@ local function build_lines(stats)
     row("Open todos",  stats.open_todos),
     row("Done todos",  stats.done_todos),
     row("Tags",        unique_tags),
+    row_pct("Linked",  stats.linked, total),
     "",
     "## Activity", "",
     row("This month",  stats.this_month),
