@@ -108,6 +108,9 @@ function M.new_note_from_template()
 end
 
 function M.follow_link()
+  local opts     = get_opts()
+  local filepath = vim.fn.expand("%:p")
+  if not vim.startswith(filepath, opts.notes_dir) then return end
   local line = vim.api.nvim_get_current_line()
   local col  = vim.api.nvim_win_get_cursor(0)[2] + 1
   local path = utils.find_link_path(line, col)
@@ -151,7 +154,14 @@ function M.new_todo()
 end
 
 function M.todo_done()
+  local opts     = get_opts()
   local filepath = vim.fn.expand("%:p")
+
+  if not vim.startswith(filepath, opts.notes_dir) then
+    vim.notify("denim: current file is not in notes directory", vim.log.levels.WARN)
+    return
+  end
+
   local filename = vim.fn.fnamemodify(filepath, ":t")
 
   if not filename:find("-O-", 1, true) then
@@ -168,9 +178,15 @@ function M.todo_done()
 end
 
 function M.refactor()
+  local opts     = get_opts()
   local filepath = vim.fn.expand("%:p")
   if filepath == "" then
     vim.notify("denim: no file open", vim.log.levels.WARN)
+    return
+  end
+
+  if not vim.startswith(filepath, opts.notes_dir) then
+    vim.notify("denim: current file is not in notes directory", vim.log.levels.WARN)
     return
   end
 

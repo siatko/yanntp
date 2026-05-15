@@ -204,6 +204,20 @@ describe("integration", function()
       notes.todo_done()
       assert.equal(1, vim.fn.filereadable(path))
     end)
+
+    it("warns when the current file is outside the notes directory", function()
+      local tmp = vim.fn.tempname() .. "-O-outside.md"
+      write_file(tmp, { "# OUTSIDE TODO", "" })
+      open_buf(tmp)
+      local warned = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
+      notes.todo_done()
+      vim.notify = orig_notify
+      assert.truthy(warned)
+      assert.equal(1, vim.fn.filereadable(tmp))
+      vim.fn.delete(tmp)
+    end)
   end)
 
   -- ─── follow_link ─────────────────────────────────────────────────────────────
@@ -255,6 +269,16 @@ describe("integration", function()
       vim.api.nvim_win_set_cursor(0, { 3, 5 })
       notes.follow_link()
       assert.equal(path, vim.fn.expand("%:p"))
+    end)
+
+    it("does nothing when the current file is outside the notes directory", function()
+      local tmp = vim.fn.tempname() .. ".md"
+      write_file(tmp, { "# OUTSIDE", "", "see [Target](some-note.md)" })
+      open_buf(tmp)
+      vim.api.nvim_win_set_cursor(0, { 3, 5 })
+      notes.follow_link()
+      assert.equal(tmp, vim.fn.expand("%:p"))
+      vim.fn.delete(tmp)
     end)
   end)
 
@@ -458,6 +482,19 @@ describe("integration", function()
       local content = vim.fn.readfile(new)
       assert.equal("some content", content[1])
       assert.equal("second line", content[2])
+    end)
+
+    it("warns when the current file is outside the notes directory", function()
+      local tmp = vim.fn.tempname() .. ".md"
+      write_file(tmp, { "# OUTSIDE", "" })
+      open_buf(tmp)
+      local warned = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
+      notes.refactor()
+      vim.notify = orig_notify
+      assert.truthy(warned)
+      vim.fn.delete(tmp)
     end)
   end)
 
