@@ -274,7 +274,7 @@ function M.refactor()
         vim.fn.rename(filepath, new_filepath)
 
         local lines = vim.fn.readfile(new_filepath)
-        if lines and lines[1] and lines[1]:match("^#%s") then
+        if name ~= "" and lines and lines[1] and lines[1]:match("^#%s") then
           lines[1] = "# " .. uppercase(name)
           vim.fn.writefile(lines, new_filepath)
         end
@@ -305,7 +305,7 @@ function M.paste_image()
         local slugged = vim.tbl_map(slugify_tag, tags)
         table.sort(slugged)
         local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
-        local file_name = date .. "--" .. name .. tag_suffix
+        local file_name = date .. "--" .. slugify_title(name) .. tag_suffix
         local existing = vim.fn.glob(opts.notes_dir .. "/" .. file_name .. ".*")
         if existing ~= "" then
           vim.notify(

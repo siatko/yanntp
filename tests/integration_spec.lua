@@ -468,6 +468,7 @@ describe("integration", function()
       wait_for(new)
       assert.equal(0, vim.fn.filereadable(orig))
       assert.equal(1, vim.fn.filereadable(new))
+      assert.equal("# MY NOTE", vim.fn.readfile(new)[1])
     end)
 
     it("renames without modifying content when there is no H1 heading", function()
