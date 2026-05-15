@@ -756,6 +756,230 @@ describe("integration", function()
     end)
   end)
 
+  -- ─── rename_tag ──────────────────────────────────────────────────────────────
+
+  describe("rename_tag", function()
+    local saved = {}
+    local telescope_modules = {
+      "telescope.pickers", "telescope.finders",
+      "telescope.config", "telescope.actions", "telescope.actions.state",
+    }
+
+    before_each(function()
+      for _, mod in ipairs(telescope_modules) do
+        saved[mod] = package.loaded[mod]
+      end
+    end)
+
+    after_each(function()
+      for _, mod in ipairs(telescope_modules) do
+        package.loaded[mod] = saved[mod]
+      end
+    end)
+
+    local function setup_mock(selected_tag)
+      local handles = {}
+      package.loaded["telescope.actions"] = {
+        select_default = { replace = function(_, fn) handles.enter = fn end },
+        close          = function() end,
+      }
+      package.loaded["telescope.actions.state"] = {
+        get_selected_entry = function()
+          return selected_tag and { value = selected_tag } or nil
+        end,
+      }
+      package.loaded["telescope.pickers"] = {
+        new = function(_, picker_opts)
+          return {
+            find = function()
+              picker_opts.attach_mappings(1, function() end)
+            end,
+          }
+        end,
+      }
+      package.loaded["telescope.finders"] = { new_table = function() return {} end }
+      package.loaded["telescope.config"]  = { values = { generic_sorter = function() return {} end } }
+      return handles
+    end
+
+    it("notifies when no tags exist", function()
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("no tags") then notified = true end end
+      tel.rename_tag()
+      vim.notify = orig_notify
+      assert.truthy(notified)
+    end)
+
+    it("renames all files carrying the old tag", function()
+      local a = dir .. "/20260514--note-a__foo.md"
+      local b = dir .. "/20260514--note-b__foo.md"
+      write_file(a, { "# NOTE A", "" })
+      write_file(b, { "# NOTE B", "" })
+      local h = setup_mock("foo")
+      mock_input("bar")
+      tel.rename_tag()
+      h.enter()
+      flush()
+      assert.equal(0, vim.fn.filereadable(a))
+      assert.equal(0, vim.fn.filereadable(b))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--note-a__bar.md"))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--note-b__bar.md"))
+    end)
+
+    it("preserves other tags on renamed files", function()
+      local orig = dir .. "/20260514--note__bar_foo_zzz.md"
+      write_file(orig, { "# NOTE", "" })
+      local h = setup_mock("foo")
+      mock_input("mid")
+      tel.rename_tag()
+      h.enter()
+      flush()
+      assert.equal(0, vim.fn.filereadable(orig))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--note__bar_mid_zzz.md"))
+    end)
+
+    it("does not rename files that do not carry the old tag", function()
+      local with_tag = dir .. "/20260514--note-a__foo.md"
+      local without  = dir .. "/20260514--note-b__bar.md"
+      write_file(with_tag, { "# A", "" })
+      write_file(without,  { "# B", "" })
+      local h = setup_mock("foo")
+      mock_input("qux")
+      tel.rename_tag()
+      h.enter()
+      flush()
+      assert.equal(0, vim.fn.filereadable(with_tag))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--note-a__qux.md"))
+      assert.equal(1, vim.fn.filereadable(without))
+    end)
+
+    it("updates backlinks in referencing notes", function()
+      local note   = dir .. "/20260514--note__foo.md"
+      local linker = dir .. "/20260514--linker.md"
+      write_file(note,   { "# NOTE", "" })
+      write_file(linker, { "# LINKER", "", "see [Note](20260514--note__foo.md)" })
+      local h = setup_mock("foo")
+      mock_input("bar")
+      tel.rename_tag()
+      h.enter()
+      flush()
+      local line = vim.fn.readfile(linker)[3]
+      assert.truthy(line:find("20260514--note__bar.md", 1, true))
+      assert.falsy(line:find("20260514--note__foo.md", 1, true))
+    end)
+
+    it("notifies with file and link counts", function()
+      local a      = dir .. "/20260514--note-a__foo.md"
+      local b      = dir .. "/20260514--note-b__foo.md"
+      local linker = dir .. "/20260514--linker.md"
+      write_file(a,      { "# A", "" })
+      write_file(b,      { "# B", "" })
+      write_file(linker, { "# LINKER", "", "[A](20260514--note-a__foo.md)" })
+      local msg
+      local orig_notify = vim.notify
+      vim.notify = function(m, _) msg = m end
+      local h = setup_mock("foo")
+      mock_input("bar")
+      tel.rename_tag()
+      h.enter()
+      flush()
+      vim.notify = orig_notify
+      assert.truthy(msg)
+      assert.truthy(msg:find("foo", 1, true))
+      assert.truthy(msg:find("bar", 1, true))
+      assert.truthy(msg:find("2 files", 1, true))
+      assert.truthy(msg:find("1 link", 1, true))
+    end)
+
+    it("does nothing when input is cancelled", function()
+      local orig = dir .. "/20260514--note__foo.md"
+      write_file(orig, { "# NOTE", "" })
+      local h = setup_mock("foo")
+      mock_input(nil)
+      tel.rename_tag()
+      h.enter()
+      flush()
+      assert.equal(1, vim.fn.filereadable(orig))
+    end)
+
+    it("notifies and does nothing when new name matches old tag", function()
+      local orig = dir .. "/20260514--note__foo.md"
+      write_file(orig, { "# NOTE", "" })
+      local msg
+      local orig_notify = vim.notify
+      vim.notify = function(m, _) msg = m end
+      local h = setup_mock("foo")
+      mock_input("foo")
+      tel.rename_tag()
+      h.enter()
+      flush()
+      vim.notify = orig_notify
+      assert.truthy(msg:find("unchanged", 1, true))
+      assert.equal(1, vim.fn.filereadable(orig))
+    end)
+
+    it("warns and does nothing when new name is invalid", function()
+      local orig = dir .. "/20260514--note__foo.md"
+      write_file(orig, { "# NOTE", "" })
+      local warned = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
+      local h = setup_mock("foo")
+      mock_input("!!!")
+      tel.rename_tag()
+      h.enter()
+      flush()
+      vim.notify = orig_notify
+      assert.truthy(warned)
+      assert.equal(1, vim.fn.filereadable(orig))
+    end)
+
+    it("notifies when no files carry the selected tag", function()
+      local note = dir .. "/20260514--note__foo.md"
+      write_file(note, { "# NOTE", "" })
+      local msg
+      local orig_notify = vim.notify
+      vim.notify = function(m, _) msg = m end
+      local h = setup_mock("nonexistent")
+      mock_input("bar")
+      tel.rename_tag()
+      h.enter()
+      flush()
+      vim.notify = orig_notify
+      assert.truthy(msg:find("no files", 1, true))
+      assert.equal(1, vim.fn.filereadable(note))
+    end)
+
+    it("redirects the current buffer when it was one of the renamed files", function()
+      local orig = dir .. "/20260514--note__foo.md"
+      write_file(orig, { "# NOTE", "" })
+      open_buf(orig)
+      local old_buf = vim.api.nvim_get_current_buf()
+      local h = setup_mock("foo")
+      mock_input("bar")
+      tel.rename_tag()
+      h.enter()
+      flush()
+      local new = dir .. "/20260514--note__bar.md"
+      assert.equal(1, vim.fn.filereadable(new))
+      assert.equal(new, vim.fn.expand("%:p"))
+      assert.falsy(vim.api.nvim_buf_is_valid(old_buf))
+    end)
+
+    it("works on todo files", function()
+      local todo = dir .. "/20260514-O-fix-bug__foo_work.md"
+      write_file(todo, { "# FIX BUG", "" })
+      local h = setup_mock("foo")
+      mock_input("ops")
+      tel.rename_tag()
+      h.enter()
+      flush()
+      assert.equal(0, vim.fn.filereadable(todo))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514-O-fix-bug__ops_work.md"))
+    end)
+  end)
+
   -- ─── pick_tags ───────────────────────────────────────────────────────────────
 
   describe("pick_tags", function()
