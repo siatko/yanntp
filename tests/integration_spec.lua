@@ -621,4 +621,62 @@ describe("integration", function()
       assert.falsy(vim.api.nvim_buf_is_loaded(bufnr))
     end)
   end)
+
+  -- ─── pick_tags ───────────────────────────────────────────────────────────────
+
+  describe("pick_tags", function()
+    local saved = {}
+    local telescope_modules = {
+      "telescope.pickers", "telescope.finders",
+      "telescope.config", "telescope.actions", "telescope.actions.state",
+    }
+
+    before_each(function()
+      for _, mod in ipairs(telescope_modules) do
+        saved[mod] = package.loaded[mod]
+      end
+    end)
+
+    after_each(function()
+      for _, mod in ipairs(telescope_modules) do
+        package.loaded[mod] = saved[mod]
+      end
+    end)
+
+    it("calls callback with {} when user deselects all pre-selected tags and confirms", function()
+      local enter_fn
+
+      package.loaded["telescope.actions"] = {
+        select_default   = { replace = function(_, fn) enter_fn = fn end },
+        close            = function() end,
+        toggle_selection = function() end,
+      }
+      package.loaded["telescope.actions.state"] = {
+        get_current_picker = function()
+          return {
+            get_multi_selection = function() return {} end,
+            manager             = { num_results = function() return 0 end, get_entry = function() return nil end },
+            selection_row       = 1,
+            move_selection      = function() end,
+          }
+        end,
+        get_current_line = function() return "" end,
+      }
+      package.loaded["telescope.pickers"] = {
+        new = function(_, opts)
+          return { find = function() opts.attach_mappings(1, function() end) end }
+        end,
+      }
+      package.loaded["telescope.finders"] = { new_table = function() return {} end }
+      package.loaded["telescope.config"]  = { values = { generic_sorter = function() return {} end } }
+
+      local result
+      tel.pick_tags(function(tags) result = tags end, { pre_selected = { "foo", "bar" } })
+
+      assert.truthy(enter_fn, "select_default handler was not registered")
+      enter_fn()
+      vim.wait(200, function() return result ~= nil end, 10)
+      assert.same({}, result)
+    end)
+  end)
 end)

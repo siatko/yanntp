@@ -318,9 +318,8 @@ function M.pick_tags(callback, opts)
             table.insert(selected, e.value)
           end
         elseif prompt_text == "" then
-          -- nothing explicitly selected: keep existing tags
           actions.close(prompt_bufnr)
-          vim.schedule(function() callback(pre_selected) end)
+          vim.schedule(function() callback({}) end)
           return
         end
 
