@@ -5,9 +5,10 @@ local function get_opts()
 end
 
 local utils = require("denim.utils")
-local slugify_title   = utils.slugify_title
-local slugify_tag     = utils.slugify_tag
+local slugify_title      = utils.slugify_title
+local slugify_tag        = utils.slugify_tag
 local tags_from_filename = utils.tags_from_filename
+local resolve_slug       = utils.resolve_slug
 
 local function uppercase(s)
   return s:upper()
@@ -253,9 +254,7 @@ function M.refactor()
   vim.ui.input({ prompt = "Note name: ", default = current_title:lower() }, function(name)
     if name == nil then return end
 
-    local new_slug = (name == "" or name == current_title)
-      and current_slug
-      or slugify_title(name)
+    local new_slug = resolve_slug(name, current_title, current_slug)
 
     vim.schedule(function()
       require("denim.telescope").pick_tags(function(tags)

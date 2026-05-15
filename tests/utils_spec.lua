@@ -150,6 +150,32 @@ describe("rename_tag_in_filename", function()
   end)
 end)
 
+describe("resolve_slug", function()
+  it("preserves current slug when name is empty", function()
+    assert.equal("my-note", utils.resolve_slug("", "My Note", "my-note"))
+  end)
+
+  it("preserves current slug when name matches title exactly", function()
+    assert.equal("my-note", utils.resolve_slug("My Note", "My Note", "my-note"))
+  end)
+
+  it("preserves current slug when name matches title in different case", function()
+    assert.equal("my-note", utils.resolve_slug("my note", "My Note", "my-note"))
+  end)
+
+  it("preserves current slug when name is lowercase of title (default prompt value)", function()
+    assert.equal("my-note", utils.resolve_slug("my note", "My Note", "my-note"))
+  end)
+
+  it("slugifies new name when it differs from current title", function()
+    assert.equal("new-name", utils.resolve_slug("New Name", "My Note", "my-note"))
+  end)
+
+  it("slugifies new name when only partially matching title", function()
+    assert.equal("my-note-updated", utils.resolve_slug("My Note Updated", "My Note", "my-note"))
+  end)
+end)
+
 describe("find_link_path", function()
   local line = "see [Alpha](alpha.md) and [Beta](beta.md) for details"
 

@@ -65,6 +65,13 @@ function M.rename_tag_in_filename(filename, old_tag, new_tag)
   return base .. suffix .. ".md", true
 end
 
+function M.resolve_slug(name, current_title, current_slug)
+  if name == "" or name:lower() == current_title:lower() then
+    return current_slug
+  end
+  return M.slugify_title(name)
+end
+
 function M.find_link_path(line, col)
   local nearest_path, nearest_dist = nil, math.huge
   local pos = 1
