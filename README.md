@@ -71,23 +71,29 @@ require("denim").setup({
   notes_dir = "~/notes",
 
   keymaps = {
+    -- basic
     new_note          = "<leader>nn",
-    new_from_template = "<leader>nN",
     search_notes      = "<leader>nf",
     search_content    = "<leader>ns",
-    search_tags       = "<leader>nt",
-    search_templates  = "<leader>ne",
-    rename_tag        = "<leader>nR",
+    refactor          = "<leader>nr",
+    paste_image       = "<leader>np",
     insert_link       = "<leader>nl",
     backlinks         = "<leader>nb",
-    paste_image       = "<leader>np",
-    refactor          = "<leader>nr",
-    new_todo          = "<leader>nTn",
-    open_todos        = "<leader>nTo",
-    done_todos        = "<leader>nTx",
-    todo_done         = "<leader>nTd",
-    open_index        = "<leader>ni",
-    open_stats        = "<leader>nS",
+    -- templates
+    new_from_template = "<leader>ntn",
+    new_template      = "<leader>ntN",
+    search_templates  = "<leader>nte",
+    -- tags
+    search_tags       = "<leader>ngs",
+    rename_tag        = "<leader>ngr",
+    -- todos
+    new_todo          = "<leader>nxn",
+    open_todos        = "<leader>nxo",
+    done_todos        = "<leader>nxd",
+    todo_done         = "<leader>nxx",
+    -- views
+    open_index        = "<leader>nvi",
+    open_stats        = "<leader>nvs",
   },
 })
 ```
@@ -97,22 +103,23 @@ require("denim").setup({
 | Key | Action |
 |---|---|
 | `<leader>nn` | New note |
-| `<leader>nN` | New note from template |
 | `<leader>nf` | Find note by filename |
 | `<leader>ns` | Search note contents (live grep) |
-| `<leader>nt` | Browse and search tags |
-| `<leader>ne` | Browse and edit templates |
-| `<leader>nR` | Rename a tag across all notes |
+| `<leader>nr` | Refactor current note (rename + retag) |
+| `<leader>np` | Paste image from clipboard |
 | `<leader>nl` | Insert link to another note |
 | `<leader>nb` | Show backlinks to current note |
-| `<leader>np` | Paste image from clipboard |
-| `<leader>nr` | Refactor current note (rename + retag) |
-| `<leader>nTn` | New todo |
-| `<leader>nTo` | List open todos |
-| `<leader>nTx` | List done todos |
-| `<leader>nTd` | Mark current todo as done |
-| `<leader>ni` | Open notes index |
-| `<leader>nS` | Open notes statistics |
+| `<leader>ntn` | New note from template |
+| `<leader>ntN` | New template |
+| `<leader>nte` | Browse and edit templates |
+| `<leader>ngs` | Browse and search tags |
+| `<leader>ngr` | Rename a tag across all notes |
+| `<leader>nxn` | New todo |
+| `<leader>nxo` | List open todos |
+| `<leader>nxd` | List done todos |
+| `<leader>nxx` | Mark current todo as done |
+| `<leader>nvi` | Open notes index |
+| `<leader>nvs` | Open notes statistics |
 | `<CR>` | Follow markdown link (inside note files) |
 
 ## File Naming
@@ -142,15 +149,15 @@ YYYYMMDD--name.ext
 
 When creating a note or todo, a Telescope picker appears after entering the title. Use `<Tab>` to select multiple existing tags. Type a new tag name and press `<Enter>` to create it on the fly - selected and typed tags are combined.
 
-`<leader>nt` opens a search picker: selecting one or more tags filters to notes that carry all of them.
+`<leader>ngs` opens a search picker: selecting one or more tags filters to notes that carry all of them.
 
-`<leader>nN` opens a template picker showing all `.md` files from `notes_dir/.templates/`. After selecting, the usual title and tag prompts follow. The template's body is used as the note's initial content; an H1 heading in the template is replaced by the generated title. Templates are never shown in note search or content grep results. If `.templates/` is empty or missing, denim notifies and bails. Create a new template with `:DenimNewTemplate` (prompts for a name, opens a blank buffer in `.templates/`). Browse and edit existing templates with `<leader>ne`.
+`<leader>ntn` opens a template picker showing all `.md` files from `notes_dir/.templates/`. After selecting, the usual title and tag prompts follow. The template's body is used as the note's initial content; an H1 heading in the template is replaced by the generated title. Templates are never shown in note search or content grep results. If `.templates/` is empty or missing, denim notifies and bails. Create a new template with `<leader>ntN` (prompts for a name, opens a blank buffer in `.templates/`). Browse and edit existing templates with `<leader>nte`.
 
-`<leader>nR` opens a single-select tag picker. After selecting a tag, enter a new name and every file carrying that tag is renamed and every backlink pointing to any of those files is rewritten. A notification reports how many files were renamed and how many link references were updated.
+`<leader>ngr` opens a single-select tag picker. After selecting a tag, enter a new name and every file carrying that tag is renamed and every backlink pointing to any of those files is rewritten. A notification reports how many files were renamed and how many link references were updated.
 
 ## Notes Index
 
-`<leader>ni` (or `:DenimIndex`) opens a virtual buffer listing all notes grouped by date, newest first:
+`<leader>nvi` (or `:DenimIndex`) opens a virtual buffer listing all notes grouped by date, newest first:
 
 ```
 # Notes Index
@@ -173,7 +180,7 @@ When creating a note or todo, a Telescope picker appears after entering the titl
 
 ## Statistics
 
-`<leader>nS` (or `:DenimStats`) opens a virtual buffer with an overview of your notes:
+`<leader>nvs` (or `:DenimStats`) opens a virtual buffer with an overview of your notes:
 
 ```
 # Notes Statistics

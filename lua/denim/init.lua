@@ -18,6 +18,11 @@ function M.setup(opts)
         desc = "denim: new note from template",
       })
     end
+    if keymaps.new_template then
+      vim.keymap.set("n", keymaps.new_template, notes.new_template, {
+        desc = "denim: new template",
+      })
+    end
     if keymaps.search_templates then
       vim.keymap.set("n", keymaps.search_templates, function()
         require("denim.telescope").search_templates()
