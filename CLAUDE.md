@@ -46,7 +46,7 @@ The filename is the metadata - no frontmatter, no database. All logic branches o
 YYYYMMDDTHHMMSS--slug__tag1_tag2.md    (note)
 YYYYMMDDTHHMMSS-O-slug__tag1_tag2.md   (open todo)
 YYYYMMDDTHHMMSS-X-slug__tag1_tag2.md   (done todo)
-YYYYMMDDTHHMMSS--name.ext              (attachment)
+YYYYMMDDTHHMMSS--name__tag1_tag2.ext   (attachment)
 ```
 
 - `--` separates timestamp from slug; `-O-` / `-X-` carry todo status

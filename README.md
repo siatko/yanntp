@@ -159,7 +159,7 @@ The timestamp makes every note unique even if you create two with the same title
 
 **Attachments**
 ```
-20260514T143022--architecture-diagram.png
+20260514T143022--architecture-diagram__pkm.png
 ```
 
 ## Tag Workflow
