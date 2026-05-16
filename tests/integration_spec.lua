@@ -630,6 +630,16 @@ describe("integration", function()
       assert.truthy(warned)
       vim.fn.delete(tmp)
     end)
+
+    it("warns when no file is open", function()
+      vim.cmd("enew")
+      local warned = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
+      notes.refactor()
+      vim.notify = orig_notify
+      assert.truthy(warned)
+    end)
   end)
 
   -- ─── update_links_to ─────────────────────────────────────────────────────────
@@ -741,6 +751,22 @@ describe("integration", function()
       vim.notify = orig_notify
       assert.truthy(errored)
     end)
+
+    it("warns when an image with the same base name already exists", function()
+      package.loaded["img-clip"] = { paste_image = function() end }
+      local date = os.date("%Y%m%dT%H%M%S")
+      write_file(dir .. "/" .. date .. "--my-photo.png", {})
+      mock_input("my photo")
+      mock_tags({})
+      local warned = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
+      notes.paste_image()
+      flush()
+      vim.notify = orig_notify
+      package.loaded["img-clip"] = nil
+      assert.truthy(warned)
+    end)
   end)
 
   -- ─── backlinks ───────────────────────────────────────────────────────────────
@@ -767,9 +793,47 @@ describe("integration", function()
       vim.notify = orig_notify
       assert.truthy(warned)
     end)
+
+    it("opens a picker when backlinks exist", function()
+      local target = dir .. "/20260514--target.md"
+      local linker = dir .. "/20260514--linker.md"
+      write_file(target, { "# TARGET", "" })
+      write_file(linker, { "# LINKER", "", "[target](20260514--target.md)" })
+      open_buf(target)
+
+      local mods = { "telescope.pickers", "telescope.finders", "telescope.config" }
+      local saved = {}
+      for _, m in ipairs(mods) do saved[m] = package.loaded[m] end
+
+      local opened = false
+      package.loaded["telescope.pickers"] = {
+        new = function(_, _) return { find = function() opened = true end } end,
+      }
+      package.loaded["telescope.finders"] = { new_table = function() return {} end }
+      package.loaded["telescope.config"] = {
+        values = { generic_sorter = function() return {} end, file_previewer = function() return {} end },
+      }
+
+      tel.backlinks()
+
+      for _, m in ipairs(mods) do package.loaded[m] = saved[m] end
+      assert.truthy(opened, "picker should open when backlinks exist")
+    end)
   end)
 
   -- ─── search_tags ─────────────────────────────────────────────────────────────
+
+  local function save_telescope_mods()
+    local mods = { "telescope.pickers", "telescope.finders", "telescope.config",
+                   "telescope.actions", "telescope.actions.state" }
+    local saved = {}
+    for _, m in ipairs(mods) do saved[m] = package.loaded[m] end
+    return mods, saved
+  end
+
+  local function restore_telescope_mods(mods, saved)
+    for _, m in ipairs(mods) do package.loaded[m] = saved[m] end
+  end
 
   describe("search_tags", function()
     it("notifies when no tags exist across notes", function()
@@ -779,6 +843,205 @@ describe("integration", function()
       tel.search_tags()
       vim.notify = orig_notify
       assert.truthy(notified)
+    end)
+
+    it("opens a picker with all tags when tags exist", function()
+      write_file(dir .. "/20260514--n1__foo_bar.md", { "# N1" })
+      local mods, saved = save_telescope_mods()
+      local finder_results
+      local enter_fn
+      package.loaded["telescope.finders"] = {
+        new_table = function(o) finder_results = o.results; return {} end,
+      }
+      package.loaded["telescope.config"] = { values = { generic_sorter = function() return {} end } }
+      package.loaded["telescope.actions"] = {
+        select_default = { replace = function(_, fn) enter_fn = fn end },
+        close          = function() end,
+      }
+      package.loaded["telescope.actions.state"] = {
+        get_current_picker = function()
+          return { get_multi_selection = function() return {} end }
+        end,
+        get_selected_entry = function() return nil end,
+      }
+      package.loaded["telescope.pickers"] = {
+        new = function(_, opts)
+          return { find = function() opts.attach_mappings(1, function() end) end }
+        end,
+      }
+      tel.search_tags()
+      restore_telescope_mods(mods, saved)
+      assert.truthy(enter_fn, "select_default handler should be registered")
+      assert.same({ "bar", "foo" }, finder_results)
+    end)
+
+    it("filters notes to those matching all selected tags (AND logic)", function()
+      write_file(dir .. "/20260514--n1__foo.md",     { "# N1" })
+      write_file(dir .. "/20260514--n2__bar.md",     { "# N2" })
+      write_file(dir .. "/20260514--n3__bar_foo.md", { "# N3" })
+      local mods, saved = save_telescope_mods()
+      local enter_fn
+      local new_table_count = 0
+      local result_files
+      package.loaded["telescope.finders"] = {
+        new_table = function(o)
+          new_table_count = new_table_count + 1
+          if new_table_count == 2 then result_files = o.results end
+          return {}
+        end,
+      }
+      package.loaded["telescope.config"] = {
+        values = { generic_sorter = function() return {} end, file_previewer = function() return {} end },
+      }
+      package.loaded["telescope.actions"] = {
+        select_default = { replace = function(_, fn) enter_fn = fn end },
+        close          = function() end,
+      }
+      package.loaded["telescope.actions.state"] = {
+        get_current_picker = function()
+          return {
+            get_multi_selection = function()
+              return { { value = "bar" }, { value = "foo" } }
+            end,
+          }
+        end,
+      }
+      package.loaded["telescope.pickers"] = {
+        new = function(_, opts)
+          return { find = function()
+            if opts.attach_mappings then opts.attach_mappings(1, function() end) end
+          end }
+        end,
+      }
+      tel.search_tags()
+      assert.truthy(enter_fn)
+      enter_fn()
+      flush()
+      restore_telescope_mods(mods, saved)
+      assert.truthy(result_files, "results picker should have opened")
+      assert.equal(1, #result_files, "only the note with both foo and bar should match")
+      assert.truthy(result_files[1]:find("n3"), "the matching file should be n3")
+    end)
+
+    it("notifies when no notes match the selected tag", function()
+      write_file(dir .. "/20260514--n1__foo.md", { "# N1" })
+      local mods, saved = save_telescope_mods()
+      local enter_fn
+      package.loaded["telescope.finders"] = { new_table = function() return {} end }
+      package.loaded["telescope.config"] = { values = { generic_sorter = function() return {} end } }
+      package.loaded["telescope.actions"] = {
+        select_default = { replace = function(_, fn) enter_fn = fn end },
+        close          = function() end,
+      }
+      package.loaded["telescope.actions.state"] = {
+        get_current_picker = function()
+          return { get_multi_selection = function() return {} end }
+        end,
+        get_selected_entry = function() return { value = "baz" } end,
+      }
+      package.loaded["telescope.pickers"] = {
+        new = function(_, opts)
+          return { find = function()
+            if opts.attach_mappings then opts.attach_mappings(1, function() end) end
+          end }
+        end,
+      }
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("no notes") then notified = true end end
+      tel.search_tags()
+      assert.truthy(enter_fn)
+      enter_fn()
+      flush()
+      vim.notify = orig_notify
+      restore_telescope_mods(mods, saved)
+      assert.truthy(notified, "should notify when no notes carry the selected tag")
+    end)
+  end)
+
+  -- ─── search_notes / search_content / list_open_todos / list_done_todos ───────
+
+  describe("search_notes", function()
+    local saved_builtin
+    before_each(function()
+      saved_builtin = package.loaded["telescope.builtin"]
+      package.loaded["telescope.builtin"] = { find_files = function() end, live_grep = function() end }
+    end)
+    after_each(function()
+      package.loaded["telescope.builtin"] = saved_builtin
+    end)
+
+    it("opens a file picker in the notes directory excluding templates", function()
+      local called_with
+      package.loaded["telescope.builtin"].find_files = function(opts) called_with = opts end
+      tel.search_notes()
+      assert.truthy(called_with, "find_files should be called")
+      assert.equal("Notes", called_with.prompt_title)
+      assert.equal(dir, called_with.cwd)
+      local cmd = table.concat(called_with.find_command, " ")
+      assert.truthy(cmd:find("templates"), "find_command should exclude .templates")
+    end)
+  end)
+
+  describe("search_content", function()
+    local saved_builtin
+    before_each(function()
+      saved_builtin = package.loaded["telescope.builtin"]
+      package.loaded["telescope.builtin"] = { find_files = function() end, live_grep = function() end }
+    end)
+    after_each(function()
+      package.loaded["telescope.builtin"] = saved_builtin
+    end)
+
+    it("opens live grep in the notes directory excluding templates", function()
+      local called_with
+      package.loaded["telescope.builtin"].live_grep = function(opts) called_with = opts end
+      tel.search_content()
+      assert.truthy(called_with, "live_grep should be called")
+      assert.equal("Notes Content", called_with.prompt_title)
+      assert.equal(dir, called_with.cwd)
+    end)
+  end)
+
+  describe("list_open_todos", function()
+    local saved_builtin
+    before_each(function()
+      saved_builtin = package.loaded["telescope.builtin"]
+      package.loaded["telescope.builtin"] = { find_files = function() end }
+    end)
+    after_each(function()
+      package.loaded["telescope.builtin"] = saved_builtin
+    end)
+
+    it("opens a picker filtered to open todos", function()
+      local called_with
+      package.loaded["telescope.builtin"].find_files = function(opts) called_with = opts end
+      tel.list_open_todos()
+      assert.truthy(called_with, "find_files should be called")
+      assert.equal("Open Todos", called_with.prompt_title)
+      local cmd = table.concat(called_with.find_command, " ")
+      assert.truthy(cmd:find("-O-"), "find_command should filter open todos")
+    end)
+  end)
+
+  describe("list_done_todos", function()
+    local saved_builtin
+    before_each(function()
+      saved_builtin = package.loaded["telescope.builtin"]
+      package.loaded["telescope.builtin"] = { find_files = function() end }
+    end)
+    after_each(function()
+      package.loaded["telescope.builtin"] = saved_builtin
+    end)
+
+    it("opens a picker filtered to done todos", function()
+      local called_with
+      package.loaded["telescope.builtin"].find_files = function(opts) called_with = opts end
+      tel.list_done_todos()
+      assert.truthy(called_with, "find_files should be called")
+      assert.equal("Done Todos", called_with.prompt_title)
+      local cmd = table.concat(called_with.find_command, " ")
+      assert.truthy(cmd:find("-X-"), "find_command should filter done todos")
     end)
   end)
 
@@ -1420,6 +1683,18 @@ describe("integration", function()
       st.open()
       local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
       assert.equal(1, stat_value(lines, "This month"))
+    end)
+
+    it("counts files created last month in the activity section", function()
+      local t = os.date("*t")
+      local lm_year, lm_num = t.year, t.month - 1
+      if lm_num == 0 then lm_num = 12; lm_year = lm_year - 1 end
+      local last_month_ts = string.format("%04d%02d01T120000", lm_year, lm_num)
+      write_file(dir .. "/" .. last_month_ts .. "--last-month.md", { "# LAST", "" })
+      write_file(dir .. "/20200101--old.md",                       { "# OLD", "" })
+      st.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.equal(1, stat_value(lines, "Last month"))
     end)
 
     it("has r and q keymaps bound on the buffer", function()

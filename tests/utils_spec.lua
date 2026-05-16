@@ -58,6 +58,14 @@ describe("slugify_tag", function()
   it("strips leading and trailing underscores", function()
     assert.equal("tag", utils.slugify_tag("_tag_"))
   end)
+
+  it("returns empty string for empty input", function()
+    assert.equal("", utils.slugify_tag(""))
+  end)
+
+  it("returns empty string for all-special-character input", function()
+    assert.equal("", utils.slugify_tag("@#$%"))
+  end)
 end)
 
 describe("tags_from_filename", function()
@@ -83,6 +91,10 @@ describe("tags_from_filename", function()
 
   it("handles datetime-format filenames", function()
     assert.same({ "lua" }, utils.tags_from_filename("20260515T143022--my-note__lua.md"))
+  end)
+
+  it("handles done todo filenames", function()
+    assert.same({ "backend" }, utils.tags_from_filename("20260514-X-fix-bug__backend.md"))
   end)
 end)
 
