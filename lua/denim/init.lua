@@ -75,6 +75,11 @@ function M.setup(opts)
         require("denim.notes").new_todo()
       end, { desc = "denim: new todo" })
     end
+    if keymaps.new_todo_from_template then
+      vim.keymap.set("n", keymaps.new_todo_from_template, function()
+        require("denim.notes").new_todo_from_template()
+      end, { desc = "denim: new todo from template" })
+    end
     if keymaps.open_todos then
       vim.keymap.set("n", keymaps.open_todos, function()
         require("denim.telescope").list_open_todos()
@@ -169,6 +174,9 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimNewTodo", function()
     require("denim.notes").new_todo()
   end, { desc = "Create a new todo" })
+  vim.api.nvim_create_user_command("DenimNewTodoFromTemplate", function()
+    require("denim.notes").new_todo_from_template()
+  end, { desc = "Create a new todo from a template" })
   vim.api.nvim_create_user_command("DenimTodoDone", function()
     require("denim.notes").todo_done()
   end, { desc = "Mark current todo as done" })

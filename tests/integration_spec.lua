@@ -811,6 +811,196 @@ describe("integration", function()
     end)
   end)
 
+  -- ─── new_todo_from_template ───────────────────────────────────────────────────
+
+  describe("new_todo_from_template", function()
+    local saved = {}
+    local telescope_modules = {
+      "telescope.pickers", "telescope.finders",
+      "telescope.config", "telescope.actions", "telescope.actions.state",
+    }
+
+    before_each(function()
+      for _, mod in ipairs(telescope_modules) do saved[mod] = package.loaded[mod] end
+    end)
+
+    after_each(function()
+      for _, mod in ipairs(telescope_modules) do package.loaded[mod] = saved[mod] end
+    end)
+
+    it("notifies when no templates exist", function()
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("no templates") then notified = true end end
+      tel.pick_template(function() end)
+      vim.notify = orig_notify
+      assert.truthy(notified)
+    end)
+
+    it("creates -O- file with template content", function()
+      local tmpl = make_template("task", { "## Steps", "", "## Notes" })
+      mock_template(tmpl)
+      mock_input("my task")
+      mock_tags({})
+      notes.new_todo_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-my-task.md"
+      wait_for(expected)
+      local lines = vim.fn.readfile(expected)
+      assert.equal("## Steps", lines[1])
+      assert.equal("## Notes", lines[3])
+    end)
+
+    it("uses -O- marker in the filename", function()
+      local tmpl = make_template("task", { "content" })
+      mock_template(tmpl)
+      mock_input("check marker")
+      mock_tags({})
+      notes.new_todo_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-check-marker.md"
+      wait_for(expected)
+      assert.equal(1, vim.fn.filereadable(expected))
+    end)
+
+    it("uses template content as-is including any H1 heading", function()
+      local tmpl = make_template("task", { "# Task Template", "", "## Steps" })
+      mock_template(tmpl)
+      mock_input("my task")
+      mock_tags({})
+      notes.new_todo_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-my-task.md"
+      wait_for(expected)
+      local lines = vim.fn.readfile(expected)
+      assert.equal("# Task Template", lines[1])
+      assert.equal("## Steps", lines[3])
+    end)
+
+    it("applies tags to the filename", function()
+      local tmpl = make_template("task", { "content" })
+      mock_template(tmpl)
+      mock_input("my task")
+      mock_tags({ "work", "alpha" })
+      notes.new_todo_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-my-task__alpha_work.md"
+      wait_for(expected)
+    end)
+
+    it("sorts tags alphabetically in the filename", function()
+      local tmpl = make_template("task", { "content" })
+      mock_template(tmpl)
+      mock_input("sorted")
+      mock_tags({ "zebra", "alpha", "mango" })
+      notes.new_todo_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-sorted__alpha_mango_zebra.md"
+      wait_for(expected)
+    end)
+
+    it("does nothing when name input is cancelled", function()
+      local tmpl = make_template("task", { "content" })
+      mock_template(tmpl)
+      mock_input(nil)
+      notes.new_todo_from_template()
+      flush()
+      assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
+    end)
+
+    it("does nothing when name input is empty string", function()
+      local tmpl = make_template("task", { "content" })
+      mock_template(tmpl)
+      mock_input("")
+      notes.new_todo_from_template()
+      flush()
+      assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
+    end)
+
+    it("opens existing todo without overwriting when name collides", function()
+      local existing = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-collision.md"
+      write_file(existing, { "original content" })
+      local tmpl = make_template("task", { "template content" })
+      mock_template(tmpl)
+      mock_input("collision")
+      mock_tags({})
+      notes.new_todo_from_template()
+      wait_for(existing)
+      assert.equal("original content", vim.fn.readfile(existing)[1])
+    end)
+
+    it("notifies when opening a colliding existing todo", function()
+      local existing = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-collision.md"
+      write_file(existing, { "original content" })
+      local tmpl = make_template("task", { "template content" })
+      mock_template(tmpl)
+      mock_input("collision")
+      mock_tags({})
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("already exists") then notified = true end end
+      notes.new_todo_from_template()
+      flush()
+      vim.notify = orig_notify
+      assert.truthy(notified)
+    end)
+
+    it("places cursor at the first $ and removes it from the buffer", function()
+      local tmpl = make_template("task", { "## Topic: $", "", "## Steps" })
+      mock_template(tmpl)
+      mock_input("my task")
+      mock_tags({})
+      notes.new_todo_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-my-task.md"
+      wait_for(expected)
+      flush()
+      local cursor = vim.api.nvim_win_get_cursor(0)
+      assert.equal(1, cursor[1])
+      assert.equal(10, cursor[2])
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.equal("## Topic: ", lines[1])
+    end)
+
+    it("Tab advances cursor to the next stop", function()
+      local tmpl = make_template("task", { "Name: $", "Due: $" })
+      mock_template(tmpl)
+      mock_input("advance")
+      mock_tags({})
+      notes.new_todo_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-advance.md"
+      wait_for(expected)
+      flush()
+      local bufnr = vim.api.nvim_get_current_buf()
+      local tab_fn
+      for _, km in ipairs(vim.api.nvim_buf_get_keymap(bufnr, "i")) do
+        if km.lhs == "<Tab>" then tab_fn = km.callback; break end
+      end
+      assert.truthy(tab_fn, "Tab keymap not set")
+      tab_fn()
+      local cursor = vim.api.nvim_win_get_cursor(0)
+      assert.equal(2, cursor[1])
+      assert.equal(5, cursor[2])
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.equal("Name: ", lines[1])
+      assert.equal("Due: ", lines[2])
+    end)
+
+    it("falls back to line 1 col 0 and sets no Tab keymap when template has no stops", function()
+      local tmpl = make_template("plain-task", { "Just plain content" })
+      mock_template(tmpl)
+      mock_input("no stops")
+      mock_tags({})
+      notes.new_todo_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-no-stops.md"
+      wait_for(expected)
+      flush()
+      local cursor = vim.api.nvim_win_get_cursor(0)
+      assert.equal(1, cursor[1])
+      assert.equal(0, cursor[2])
+      local bufnr = vim.api.nvim_get_current_buf()
+      local has_tab = false
+      for _, km in ipairs(vim.api.nvim_buf_get_keymap(bufnr, "i")) do
+        if km.lhs == "<Tab>" then has_tab = true; break end
+      end
+      assert.falsy(has_tab)
+    end)
+  end)
+
   -- ─── template tab stops ──────────────────────────────────────────────────────
 
   describe("template tab stops", function()

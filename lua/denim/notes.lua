@@ -141,6 +141,41 @@ function M.new_note_from_template()
   end)
 end
 
+function M.new_todo_from_template()
+  local opts = get_opts()
+  vim.fn.mkdir(opts.notes_dir, "p")
+
+  require("denim.telescope").pick_template(function(tmpl_path)
+    vim.ui.input({ prompt = "Todo name: " }, function(name)
+      if not name or name == "" then return end
+      vim.schedule(function()
+        require("denim.telescope").pick_tags(function(tags)
+          local date    = os.date("%Y%m%dT%H%M%S")
+          local slug    = slugify_title(name)
+          local slugged = vim.tbl_map(slugify_tag, tags)
+          table.sort(slugged)
+          local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
+          local filename   = date .. "-O-" .. slug .. tag_suffix .. ".md"
+          local filepath   = opts.notes_dir .. "/" .. filename
+
+          if vim.fn.filereadable(filepath) == 1 then
+            vim.notify("denim: todo already exists, opening: " .. filename, vim.log.levels.INFO)
+            vim.cmd("edit " .. vim.fn.fnameescape(filepath))
+            return
+          end
+
+          local tmpl_lines = vim.fn.readfile(tmpl_path)
+          vim.fn.writefile(tmpl_lines, filepath)
+          vim.cmd("edit " .. vim.fn.fnameescape(filepath))
+          vim.schedule(function()
+            activate_tab_stops(vim.api.nvim_get_current_buf())
+          end)
+        end)
+      end)
+    end)
+  end)
+end
+
 function M.follow_link()
   local opts     = get_opts()
   local filepath = vim.fn.expand("%:p")

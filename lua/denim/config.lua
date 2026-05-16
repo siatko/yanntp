@@ -17,6 +17,7 @@ M.defaults = {
     search_untagged   = "<leader>ngu",
     rename_tag        = "<leader>ngr",
     new_todo          = "<leader>nxn",
+    new_todo_from_template = "<leader>nxt",
     open_todos        = "<leader>nxo",
     done_todos        = "<leader>nxd",
     todo_done         = "<leader>nxx",
