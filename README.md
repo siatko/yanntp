@@ -91,6 +91,7 @@ require("denim").setup({
     rename_tag        = "<leader>ngr",
     -- todos
     new_todo          = "<leader>nxn",
+    new_todo_from_template = "<leader>nxt",
     open_todos        = "<leader>nxo",
     done_todos        = "<leader>nxd",
     todo_done         = "<leader>nxx",
@@ -120,6 +121,7 @@ require("denim").setup({
 | `<leader>ngu` | List notes without any tags |
 | `<leader>ngr` | Rename a tag across all notes |
 | `<leader>nxn` | New todo |
+| `<leader>nxt` | New todo from template |
 | `<leader>nxo` | List open todos |
 | `<leader>nxd` | List done todos |
 | `<leader>nxx` | Mark current todo as done |
@@ -299,7 +301,3 @@ I'm a dad with a full-time job and approximately 45 minutes of free time per wee
 
 If you're using this plugin or thinking about contributing - you should know that. The ideas, design decisions, and direction are mine; Claude helped me get them out of my head and into working Lua faster than I could have alone. Issues and PRs are very welcome either way.
 
-## TODO
-
-- [ ] Refactor from a link - run refactor while the cursor is on a `[title](path)` link in any note, not only when the target file is the active buffer
-- [x] Integration tests for rename_tag
