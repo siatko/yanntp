@@ -70,6 +70,23 @@ describe("integration", function()
     return dir .. "/.templates/" .. name .. ".md"
   end
 
+  -- ─── config ──────────────────────────────────────────────────────────────────
+
+  describe("config", function()
+    it("resolves symlinks in notes_dir", function()
+      local real = vim.fn.tempname()
+      vim.fn.mkdir(real, "p")
+      local link = vim.fn.tempname()
+      vim.fn.system("ln -s " .. vim.fn.shellescape(real) .. " " .. vim.fn.shellescape(link))
+      config.setup({ notes_dir = link })
+      local resolved = vim.fn.resolve(link)
+      assert.equal(resolved, config.options.notes_dir)
+      vim.fn.delete(link)
+      vim.fn.delete(real, "rf")
+      config.setup({ notes_dir = dir })
+    end)
+  end)
+
   -- ─── new_note ────────────────────────────────────────────────────────────────
 
   describe("new_note", function()
@@ -405,6 +422,25 @@ describe("integration", function()
       assert.equal(path, vim.fn.expand("%:p"))
     end)
 
+    it("opens URLs in the browser without warning", function()
+      local source = dir .. "/20260514--note.md"
+      write_file(source, { "# NOTE", "", "watch [this](https://youtube.com/watch?v=dQw4w9WgXcQ)" })
+      open_buf(source)
+      vim.api.nvim_win_set_cursor(0, { 3, 8 })
+      local warned = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
+      local launched = false
+      local orig_jobstart = vim.fn.jobstart
+      vim.fn.jobstart = function(cmd, _) if cmd[1] == "xdg-open" then launched = true end end
+      notes.follow_link()
+      vim.fn.jobstart = orig_jobstart
+      vim.notify = orig_notify
+      assert.truthy(launched)
+      assert.is_false(warned)
+      assert.equal(source, vim.fn.expand("%:p"))
+    end)
+
     it("does nothing when the current file is outside the notes directory", function()
       local tmp = vim.fn.tempname() .. ".md"
       write_file(tmp, { "# OUTSIDE", "", "see [Target](some-note.md)" })
@@ -413,6 +449,23 @@ describe("integration", function()
       notes.follow_link()
       assert.equal(tmp, vim.fn.expand("%:p"))
       vim.fn.delete(tmp)
+    end)
+
+    it("follows links when notes_dir was configured via a symlink path", function()
+      local link = vim.fn.tempname()
+      vim.fn.system("ln -s " .. vim.fn.shellescape(dir) .. " " .. vim.fn.shellescape(link))
+      config.setup({ notes_dir = link })
+
+      local target = dir .. "/20260514--target.md"
+      local source = dir .. "/20260514--source.md"
+      write_file(target, { "# TARGET", "" })
+      write_file(source, { "# SOURCE", "", "see [Target](20260514--target.md)" })
+      open_buf(source)
+      vim.api.nvim_win_set_cursor(0, { 3, 5 })
+      notes.follow_link()
+
+      vim.fn.delete(link)
+      assert.equal(target, vim.fn.expand("%:p"))
     end)
   end)
 
@@ -1823,6 +1876,95 @@ describe("integration", function()
       tel.insert_link()
       vim.notify = orig_notify
       assert.truthy(warned)
+    end)
+  end)
+
+  -- ─── insert_url_link ─────────────────────────────────────────────────────────
+
+  describe("insert_url_link", function()
+    local function setup_buf(lines, row, col)
+      local path = dir .. "/note.md"
+      write_file(path, lines)
+      open_buf(path)
+      vim.api.nvim_win_set_cursor(0, { row, col })
+    end
+
+    it("inserts markdown link with URL from first prompt and title from second", function()
+      vim.fn.setreg("+", "https://example.com")
+      setup_buf({ "see " }, 1, 3)
+      local responses = { "https://example.com", "My Site" }
+      local i = 0
+      vim.ui.input = function(_, cb) i = i + 1; cb(responses[i]) end
+      notes.insert_url_link()
+      flush()
+      local line = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
+      assert.equal("see [My Site](https://example.com)", line)
+    end)
+
+    it("pre-fills URL prompt with clipboard content", function()
+      vim.fn.setreg("+", "https://example.com")
+      setup_buf({ "" }, 1, 0)
+      local captured_default
+      local i = 0
+      vim.ui.input = function(opts, cb)
+        i = i + 1
+        if i == 1 then captured_default = opts.default end
+        cb("value")
+      end
+      notes.insert_url_link()
+      flush()
+      assert.equal("https://example.com", captured_default)
+    end)
+
+    it("title prompt has no default", function()
+      vim.fn.setreg("+", "https://example.com")
+      setup_buf({ "" }, 1, 0)
+      local title_default = "sentinel"
+      local i = 0
+      vim.ui.input = function(opts, cb)
+        i = i + 1
+        if i == 2 then title_default = opts.default end
+        cb("value")
+      end
+      notes.insert_url_link()
+      flush()
+      assert.is_nil(title_default)
+    end)
+
+    it("does nothing when URL prompt is cancelled", function()
+      vim.fn.setreg("+", "https://example.com")
+      setup_buf({ "hello" }, 1, 4)
+      vim.ui.input = function(_, cb) cb(nil) end
+      notes.insert_url_link()
+      flush()
+      local line = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
+      assert.equal("hello", line)
+    end)
+
+    it("does nothing when title prompt is cancelled", function()
+      vim.fn.setreg("+", "https://example.com")
+      setup_buf({ "hello" }, 1, 4)
+      local i = 0
+      vim.ui.input = function(_, cb)
+        i = i + 1
+        cb(i == 1 and "https://example.com" or nil)
+      end
+      notes.insert_url_link()
+      flush()
+      local line = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
+      assert.equal("hello", line)
+    end)
+
+    it("inserts link with empty title when title input is left empty", function()
+      vim.fn.setreg("+", "https://example.com")
+      setup_buf({ "" }, 1, 0)
+      local responses = { "https://example.com", "" }
+      local i = 0
+      vim.ui.input = function(_, cb) i = i + 1; cb(responses[i]) end
+      notes.insert_url_link()
+      flush()
+      local line = vim.api.nvim_buf_get_lines(0, 0, 1, false)[1]
+      assert.equal("[](https://example.com)", line)
     end)
   end)
 

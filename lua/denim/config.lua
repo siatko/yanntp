@@ -9,6 +9,7 @@ M.defaults = {
     refactor          = "<leader>nr",
     paste_image       = "<leader>np",
     insert_link       = "<leader>nl",
+    insert_url_link   = "<leader>nu",
     backlinks         = "<leader>nb",
     new_from_template = "<leader>ntn",
     new_template      = "<leader>ntN",
@@ -31,7 +32,7 @@ M.options = {}
 
 function M.setup(opts)
   M.options = vim.tbl_deep_extend("force", {}, M.defaults, opts or {})
-  M.options.notes_dir = vim.fn.expand(M.options.notes_dir)
+  M.options.notes_dir = vim.fn.resolve(vim.fn.expand(M.options.notes_dir))
 end
 
 return M

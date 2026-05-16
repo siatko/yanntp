@@ -60,6 +60,11 @@ function M.setup(opts)
         require("denim.telescope").insert_link()
       end, { desc = "denim: insert link to note" })
     end
+    if keymaps.insert_url_link then
+      vim.keymap.set("n", keymaps.insert_url_link, function()
+        require("denim.notes").insert_url_link()
+      end, { desc = "denim: insert URL link from clipboard" })
+    end
     if keymaps.backlinks then
       vim.keymap.set("n", keymaps.backlinks, function()
         require("denim.telescope").backlinks()
@@ -129,8 +134,11 @@ function M.setup(opts)
     group = "denim",
     pattern = "*.md",
     callback = function()
-      if vim.startswith(vim.fn.expand("%:p"), notes_dir) then
+      if vim.startswith(vim.fn.resolve(vim.fn.expand("%:p")), notes_dir) then
         vim.keymap.set("n", "<CR>", function()
+          require("denim.notes").follow_link()
+        end, { buffer = true, desc = "denim: follow link" })
+        vim.keymap.set("n", "<C-LeftMouse>", function()
           require("denim.notes").follow_link()
         end, { buffer = true, desc = "denim: follow link" })
       end
@@ -140,6 +148,9 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimInsertLink", function()
     require("denim.telescope").insert_link()
   end, { desc = "Insert link to another note" })
+  vim.api.nvim_create_user_command("DenimInsertUrlLink", function()
+    require("denim.notes").insert_url_link()
+  end, { desc = "Insert URL link from clipboard" })
   vim.api.nvim_create_user_command("DenimBacklinks", function()
     require("denim.telescope").backlinks()
   end, { desc = "Show backlinks to current note" })

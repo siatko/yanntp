@@ -79,6 +79,10 @@ local function activate_tab_stops(bufnr)
 end
 
 local function open_path(path)
+  if path:match("^https?://") or path:match("^ftp://") then
+    vim.fn.jobstart({ "xdg-open", path }, { detach = true })
+    return
+  end
   local current_dir = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h")
   local target = vim.fn.fnamemodify(current_dir .. "/" .. path, ":p")
   local ext = target:match("%.(%w+)$")
@@ -178,7 +182,7 @@ end
 
 function M.follow_link()
   local opts     = get_opts()
-  local filepath = vim.fn.expand("%:p")
+  local filepath = vim.fn.resolve(vim.fn.expand("%:p"))
   if not vim.startswith(filepath, opts.notes_dir) then return end
   local line = vim.api.nvim_get_current_line()
   local col  = vim.api.nvim_win_get_cursor(0)[2] + 1
@@ -359,6 +363,25 @@ function M.paste_image()
           insert_mode_after_paste = false,
           template = "![$FILE_NAME_NO_EXT]($FILE_PATH)",
         })
+      end)
+    end)
+  end)
+end
+
+function M.insert_url_link()
+  local clip = vim.fn.getreg("+")
+
+  vim.ui.input({ prompt = "URL: ", default = clip }, function(url)
+    if not url or url == "" then return end
+    vim.ui.input({ prompt = "Link title: " }, function(title)
+      if title == nil then return end
+      vim.schedule(function()
+        local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+        local ln   = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
+        local link = string.format("[%s](%s)", title, url)
+        vim.api.nvim_buf_set_lines(0, row - 1, row, false,
+          { ln:sub(1, col + 1) .. link .. ln:sub(col + 2) })
+        vim.api.nvim_win_set_cursor(0, { row, col + #link })
       end)
     end)
   end)
