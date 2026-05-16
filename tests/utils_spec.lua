@@ -32,6 +32,14 @@ describe("slugify_title", function()
   it("returns empty string for all-special-character input", function()
     assert.equal("", utils.slugify_title("!!!"))
   end)
+
+  it("preserves german umlauts", function()
+    assert.equal("meine-überlegungen", utils.slugify_title("Meine Überlegungen"))
+  end)
+
+  it("preserves mixed umlaut and ascii", function()
+    assert.equal("käse-und-brot", utils.slugify_title("Käse und Brot"))
+  end)
 end)
 
 describe("slugify_tag", function()
@@ -65,6 +73,10 @@ describe("slugify_tag", function()
 
   it("returns empty string for all-special-character input", function()
     assert.equal("", utils.slugify_tag("@#$%"))
+  end)
+
+  it("preserves german umlauts", function()
+    assert.equal("notiz_über_käse", utils.slugify_tag("Notiz über Käse"))
   end)
 end)
 

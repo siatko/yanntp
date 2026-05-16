@@ -1,18 +1,25 @@
 local M = {}
 
+local function lower_utf8(s)
+  -- Lua's string.lower() is ASCII-only; map common uppercase non-ASCII chars
+  s = s:gsub("Ä", "ä"):gsub("Ö", "ö"):gsub("Ü", "ü")
+  return s:lower()
+end
+
 function M.slugify_title(name)
-  local s = name:lower()
+  local s = lower_utf8(name)
   s = s:gsub("[%s]+", "-")
-  s = s:gsub("[^%w%-]", "")
+  -- %c and %p only match ASCII, so UTF-8 high bytes are preserved
+  s = s:gsub("[%c%p]", function(c) if c == "-" then return c end return "" end)
   s = s:gsub("%-+", "-")
   s = s:gsub("^%-", ""):gsub("%-$", "")
   return s
 end
 
 function M.slugify_tag(tag)
-  local s = tag:lower()
+  local s = lower_utf8(tag)
   s = s:gsub("[%s%-]+", "_")
-  s = s:gsub("[^%w_]", "")
+  s = s:gsub("[%c%p]", function(c) if c == "_" then return c end return "" end)
   s = s:gsub("_+", "_")
   s = s:gsub("^_", ""):gsub("_$", "")
   return s
