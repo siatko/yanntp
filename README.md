@@ -182,7 +182,7 @@ The ID never changes, so links never break - even after a rename. denim takes a 
 [My Note](20260514T143022--my-note__pkm.md)
 ```
 
-This means denim has to rewrite backlinks whenever a file is renamed (which it does automatically). The tradeoff is deliberate: your notes stay **plain readable markdown** that renders correctly in GitHub, Obsidian, any static site generator, or a plain text editor - no plugin required to resolve links. ID-based links only make sense inside the tool that understands them. denim treats your notes as files first, and the plugin as a convenience layer on top.
+This means denim has to rewrite backlinks whenever a file is renamed (which it does automatically). That is a small price to pay for a significant gain: your notes are **plain readable markdown** that works everywhere - GitHub, Obsidian, any static site generator, or a plain text editor - with no plugin needed to resolve links. ID-based links are opaque outside of Emacs and lock your notes to the tool that created them. denim's goal is the opposite: the plugin is a convenience layer, and your notes should outlive it.
 
 ## Tag Workflow
 
