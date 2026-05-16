@@ -3,17 +3,17 @@
 ```
    o   o   o   o   o
   ___________________
- |                   |
+ |                   |   denim.nvim
  | 20260514T143022-- |
- | my-note__pkm.md   |   denim.nvim
- |                   |
- |  # MY NOTE        |   no database.
+ | my-note__pkm.md   |   no database.
  |                   |   no frontmatter.
- |  _______________  |   just a really
- |  _______________  |   long filename.
- |  _______          |
- |                   |   yet another denote
- |___________________|   plugin nobody asked for.
+ |  # MY NOTE        |   just a really
+ |                   |   long filename.
+ |  _______________  |
+ |  _______________  |
+ |  _______          |   yet another denote
+ |                   |   plugin nobody asked for. 
+ |___________________|
 ```
 
 ![Tests](https://github.com/siatko/denim.nvim/actions/workflows/test.yml/badge.svg)
