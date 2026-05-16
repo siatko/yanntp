@@ -18,10 +18,11 @@ denim.nvim is a Neovim plugin with a flat module structure under `lua/denim/`:
 
 - **`init.lua`** - entry point; `setup()` wires keymaps, autocmds, and user commands by delegating to the other modules
 - **`config.lua`** - holds defaults and the merged `options` table; all other modules call `require("denim.config").options` to read settings at call time (not at load time)
-- **`utils.lua`** - pure Lua helpers: `slugify_title`, `slugify_tag`, `tags_from_filename`, `relative_path`; no Neovim API, fully unit-testable
-- **`notes.lua`** - filesystem operations: create note/todo, follow link, mark todo done/undone, refactor (rename + retag + update backlinks), paste image
-- **`telescope.lua`** - all Telescope pickers: file search, content grep, tag picker, insert link, backlinks, todo lists, `update_links_to` (called by refactor to rewrite links in other notes)
+- **`utils.lua`** - pure Lua helpers with no Neovim API dependency, fully unit-testable: `slugify_title`, `slugify_tag`, `tags_from_filename`, `relative_path`, `rename_tag_in_filename`, `resolve_slug`, `find_link_path`
+- **`notes.lua`** - filesystem operations: `new_note`, `new_todo`, `new_note_from_template`, `new_todo_from_template`, `new_template`, `follow_link`, `todo_done`, `todo_undone`, `refactor` (rename + retag + update backlinks), `paste_image`
+- **`telescope.lua`** - all Telescope pickers: `search_notes`, `search_content`, `search_tags`, `search_untagged`, `search_templates`, `insert_link`, `backlinks`, `pick_tags`, `pick_template`, `list_open_todos`, `list_done_todos`, `rename_tag`, `update_links_to` (called by notes.lua after any rename to rewrite backlinks)
 - **`index.lua`** - virtual `nofile` buffer listing all notes grouped by date; `_build_lines` is exported for testing
+- **`stats.lua`** - virtual `nofile` buffer with note/todo counts, tag usage, and monthly activity
 
 **`plugin/denim.lua`** is intentionally empty - setup is user-driven via `require("denim").setup()`.
 
@@ -36,6 +37,11 @@ All logic branches on the filename pattern, so it's central to understand:
 
 Tags live after `__`, separated by `_`. The `tags_from_filename` utility extracts them; `slugify_tag` normalises them (spaces/hyphens become underscores).
 
-## Testing notes
+## Testing
 
-Only pure functions in `utils.lua` and `index._build_lines` are unit-tested. Filesystem and UI operations are not tested. New pure helpers belong in `utils.lua` and should get specs in `tests/utils_spec.lua`.
+- **`tests/utils_spec.lua`** - unit tests for all pure helpers in `utils.lua`
+- **`tests/index_spec.lua`** - unit tests for `index._build_lines`
+- **`tests/stats_spec.lua`** - unit tests for stats computation helpers
+- **`tests/integration_spec.lua`** - integration tests for all user-facing operations in `notes.lua` and `telescope.lua`; each test creates a real temp directory, exercises the function, and asserts on filesystem state and buffer state
+
+New pure helpers belong in `utils.lua` and should get unit specs in `tests/utils_spec.lua`. New user-facing operations in `notes.lua` should get integration specs in `tests/integration_spec.lua`. For every bug fixed, add a regression test that would have caught it.
