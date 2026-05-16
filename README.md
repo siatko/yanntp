@@ -168,6 +168,22 @@ The timestamp makes every note unique even if you create two with the same title
 20260514T143022--architecture-diagram__pkm.png
 ```
 
+## Linking Philosophy
+
+Denote (the Emacs plugin that inspired the filename format) uses ID-based links:
+
+```
+[[denote:20260514T143022]]
+```
+
+The ID never changes, so links never break - even after a rename. denim takes a different approach and uses standard markdown links pointing to the full filename:
+
+```markdown
+[My Note](20260514T143022--my-note__pkm.md)
+```
+
+This means denim has to rewrite backlinks whenever a file is renamed (which it does automatically). The tradeoff is deliberate: your notes stay **plain readable markdown** that renders correctly in GitHub, Obsidian, any static site generator, or a plain text editor - no plugin required to resolve links. ID-based links only make sense inside the tool that understands them. denim treats your notes as files first, and the plugin as a convenience layer on top.
+
 ## Tag Workflow
 
 When creating a note or todo, a Telescope picker appears after entering the title. Use `<Tab>` to toggle existing tags. To add new tags, type one or more space-separated names and press `<Enter>` - the picker re-opens with all previously-selected and newly-typed tags pre-selected, so you can keep selecting or deselecting. Press `<Enter>` with an empty prompt to finalize. Press `<Esc>` at any point to cancel without creating the note.
