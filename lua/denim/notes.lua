@@ -361,7 +361,7 @@ function M.paste_image()
           file_name = file_name,
           prompt_for_file_name = false,
           insert_mode_after_paste = false,
-          template = "![$FILE_NAME_NO_EXT]($FILE_PATH)",
+          template = "![$FILE_NAME_NO_EXT]($FILE_NAME)",
         })
       end)
     end)

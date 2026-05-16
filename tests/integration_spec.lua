@@ -820,6 +820,43 @@ describe("integration", function()
       package.loaded["img-clip"] = nil
       assert.truthy(warned)
     end)
+
+    it("uses $FILE_NAME (not $FILE_PATH) in the img-clip template", function()
+      local captured
+      package.loaded["img-clip"] = {
+        paste_image = function(opts) captured = opts end,
+      }
+      mock_input("my photo")
+      mock_tags({})
+      notes.paste_image()
+      flush()
+      package.loaded["img-clip"] = nil
+      assert.truthy(captured, "img-clip.paste_image was not called")
+      assert.truthy(captured.template:find("$FILE_NAME", 1, true),
+        "template should contain $FILE_NAME")
+      assert.falsy(captured.template:find("$FILE_PATH", 1, true),
+        "template must not contain $FILE_PATH (would produce absolute path)")
+    end)
+
+    it("uses $FILE_NAME template when pasting image from a todo buffer", function()
+      local todo_path = dir .. "/20260101T000000-O-my-todo.md"
+      write_file(todo_path, {})
+      open_buf(todo_path)
+      local captured
+      package.loaded["img-clip"] = {
+        paste_image = function(opts) captured = opts end,
+      }
+      mock_input("my photo")
+      mock_tags({})
+      notes.paste_image()
+      flush()
+      package.loaded["img-clip"] = nil
+      assert.truthy(captured, "img-clip.paste_image was not called")
+      assert.truthy(captured.template:find("$FILE_NAME", 1, true),
+        "template should contain $FILE_NAME")
+      assert.falsy(captured.template:find("$FILE_PATH", 1, true),
+        "template must not contain $FILE_PATH (would produce absolute path)")
+    end)
   end)
 
   -- ─── backlinks ───────────────────────────────────────────────────────────────
