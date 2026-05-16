@@ -303,7 +303,7 @@ Tests cover pure helpers in `utils.lua`, the index line builder in `index.lua`, 
 
 PRs and issues are very welcome. One rule: **every change must be covered by tests.** This is the most important thing. Tests are what keep the plugin reliable as it grows, and no PR will be merged without them.
 
-- Bug fix - add a regression test that would have caught it
+- Bug fix - **always** add a regression test that reproduces the bug before the fix. This is non-negotiable: a bug fix without a test is just a bug waiting to come back
 - New feature in `notes.lua` - add integration specs in `tests/integration_spec.lua`
 - New pure helper in `utils.lua` - add unit specs in `tests/utils_spec.lua`
 
