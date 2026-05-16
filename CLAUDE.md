@@ -19,7 +19,7 @@ denim.nvim is a Neovim plugin with a flat module structure under `lua/denim/`:
 - **`init.lua`** - entry point; `setup()` wires keymaps, autocmds, and user commands by delegating to the other modules
 - **`config.lua`** - holds defaults and the merged `options` table; all other modules call `require("denim.config").options` to read settings at call time (not at load time)
 - **`utils.lua`** - pure Lua helpers: `slugify_title`, `slugify_tag`, `tags_from_filename`, `relative_path`; no Neovim API, fully unit-testable
-- **`notes.lua`** - filesystem operations: create note/todo, follow link, mark todo done, refactor (rename + retag + update backlinks), paste image
+- **`notes.lua`** - filesystem operations: create note/todo, follow link, mark todo done/undone, refactor (rename + retag + update backlinks), paste image
 - **`telescope.lua`** - all Telescope pickers: file search, content grep, tag picker, insert link, backlinks, todo lists, `update_links_to` (called by refactor to rewrite links in other notes)
 - **`index.lua`** - virtual `nofile` buffer listing all notes grouped by date; `_build_lines` is exported for testing
 

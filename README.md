@@ -23,7 +23,7 @@
 
 - **Flat structure** - all notes, todos and attachments live in one directory
 - **Denote-style filenames** - `YYYYMMDDTHHMMSS--title__tag1_tag2.md`
-- **Todo tracking** - open (`-O-`) and done (`-X-`) status embedded in filename
+- **Todo tracking** - open (`-O-`) and done (`-X-`) status embedded in filename; todos can be marked done or reopened
 - **Tag picker** - Telescope UI with multi-select and inline tag creation
 - **Tag search** - browse all tags across your notes and filter by one or more
 - **Tag rename** - rename a tag across all notes in one step; all affected files and backlinks updated automatically
@@ -94,6 +94,7 @@ require("denim").setup({
     open_todos        = "<leader>nxo",
     done_todos        = "<leader>nxd",
     todo_done         = "<leader>nxx",
+    todo_undone       = "<leader>nxu",
     -- views
     open_index        = "<leader>nvi",
     open_stats        = "<leader>nvs",
@@ -122,6 +123,7 @@ require("denim").setup({
 | `<leader>nxo` | List open todos |
 | `<leader>nxd` | List done todos |
 | `<leader>nxx` | Mark current todo as done |
+| `<leader>nxu` | Reopen a done todo |
 | `<leader>nvi` | Open notes index |
 | `<leader>nvs` | Open notes statistics |
 | `<CR>` | Follow markdown link (inside note files) |
@@ -261,6 +263,7 @@ Attendees: $
 | `:DenimOpenTodos` | List open todos |
 | `:DenimDoneTodos` | List done todos |
 | `:DenimTodoDone` | Mark current todo as done |
+| `:DenimTodoUndone` | Reopen a done todo |
 | `:DenimIndex` | Open notes index |
 | `:DenimStats` | Open notes statistics |
 
