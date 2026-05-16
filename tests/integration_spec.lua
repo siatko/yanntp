@@ -255,6 +255,23 @@ describe("integration", function()
       assert.truthy(line:find("20260514-X-fix-bug.md", 1, true))
       assert.falsy(line:find("20260514-O-fix-bug.md", 1, true))
     end)
+
+    it("closes the old buffer after marking done", function()
+      local path = dir .. "/20260514-O-close-me.md"
+      write_file(path, { "# CLOSE ME", "" })
+      open_buf(path)
+      local old_buf = vim.api.nvim_get_current_buf()
+      notes.todo_done()
+      assert.falsy(vim.api.nvim_buf_is_valid(old_buf))
+    end)
+
+    it("opens the done file in the current window", function()
+      local path = dir .. "/20260514-O-open-done.md"
+      write_file(path, { "# OPEN DONE", "" })
+      open_buf(path)
+      notes.todo_done()
+      assert.equal(dir .. "/20260514-X-open-done.md", vim.fn.expand("%:p"))
+    end)
   end)
 
   -- ─── follow_link ─────────────────────────────────────────────────────────────
