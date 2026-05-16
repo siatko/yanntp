@@ -290,6 +290,12 @@ make test
 
 Tests cover pure helpers in `utils.lua`, the index line builder in `index.lua`, and integration tests for all user-facing operations.
 
+## A Note on How This Was Built
+
+I'm a dad with a full-time job and approximately 45 minutes of free time per week. This plugin exists because I pair programmed it with [Claude Code](https://claude.ai/code) - which turns out to be a pretty good way to ship a Neovim plugin when your other option is waiting until your child moves out.
+
+If you're using this plugin or thinking about contributing - you should know that. The ideas, design decisions, and direction are mine; Claude helped me get them out of my head and into working Lua faster than I could have alone. Issues and PRs are very welcome either way.
+
 ## TODO
 
 - [ ] Refactor from a link - run refactor while the cursor is on a `[title](path)` link in any note, not only when the target file is the active buffer
