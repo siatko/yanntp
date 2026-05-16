@@ -17,6 +17,8 @@
 ```
 
 ![Tests](https://github.com/siatko/denim.nvim/actions/workflows/test.yml/badge.svg)
+![License](https://img.shields.io/github/license/siatko/denim.nvim)
+![Latest release](https://img.shields.io/github/v/release/siatko/denim.nvim)
 
 > A [Denote](https://protesilaos.com/emacs/denote)-inspired note-taking plugin for Neovim.
 > Plain markdown files, structured filenames, no database, no proprietary formats.
