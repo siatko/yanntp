@@ -3,25 +3,22 @@ local M = {}
 function M.setup(opts)
   require("denim.config").setup(opts)
 
-  local notes = require("denim.notes")
-  notes.ensure_notes_dir()
-
   local keymaps = require("denim.config").options.keymaps
   if keymaps then
     if keymaps.new_note then
-      vim.keymap.set("n", keymaps.new_note, notes.new_note, {
-        desc = "denim: new note",
-      })
+      vim.keymap.set("n", keymaps.new_note, function()
+        require("denim.notes").new_note()
+      end, { desc = "denim: new note" })
     end
     if keymaps.new_from_template then
-      vim.keymap.set("n", keymaps.new_from_template, notes.new_note_from_template, {
-        desc = "denim: new note from template",
-      })
+      vim.keymap.set("n", keymaps.new_from_template, function()
+        require("denim.notes").new_note_from_template()
+      end, { desc = "denim: new note from template" })
     end
     if keymaps.new_template then
-      vim.keymap.set("n", keymaps.new_template, notes.new_template, {
-        desc = "denim: new template",
-      })
+      vim.keymap.set("n", keymaps.new_template, function()
+        require("denim.notes").new_template()
+      end, { desc = "denim: new template" })
     end
     if keymaps.search_templates then
       vim.keymap.set("n", keymaps.search_templates, function()
@@ -54,9 +51,9 @@ function M.setup(opts)
       end, { desc = "denim: rename tag across all notes" })
     end
     if keymaps.paste_image then
-      vim.keymap.set("n", keymaps.paste_image, notes.paste_image, {
-        desc = "denim: paste image from clipboard",
-      })
+      vim.keymap.set("n", keymaps.paste_image, function()
+        require("denim.notes").paste_image()
+      end, { desc = "denim: paste image from clipboard" })
     end
     if keymaps.insert_link then
       vim.keymap.set("n", keymaps.insert_link, function()
@@ -69,14 +66,14 @@ function M.setup(opts)
       end, { desc = "denim: show backlinks" })
     end
     if keymaps.refactor then
-      vim.keymap.set("n", keymaps.refactor, notes.refactor, {
-        desc = "denim: refactor current note",
-      })
+      vim.keymap.set("n", keymaps.refactor, function()
+        require("denim.notes").refactor()
+      end, { desc = "denim: refactor current note" })
     end
     if keymaps.new_todo then
-      vim.keymap.set("n", keymaps.new_todo, notes.new_todo, {
-        desc = "denim: new todo",
-      })
+      vim.keymap.set("n", keymaps.new_todo, function()
+        require("denim.notes").new_todo()
+      end, { desc = "denim: new todo" })
     end
     if keymaps.open_todos then
       vim.keymap.set("n", keymaps.open_todos, function()
@@ -89,9 +86,9 @@ function M.setup(opts)
       end, { desc = "denim: list done todos" })
     end
     if keymaps.todo_done then
-      vim.keymap.set("n", keymaps.todo_done, notes.todo_done, {
-        desc = "denim: mark current todo as done",
-      })
+      vim.keymap.set("n", keymaps.todo_done, function()
+        require("denim.notes").todo_done()
+      end, { desc = "denim: mark current todo as done" })
     end
     if keymaps.open_index then
       vim.keymap.set("n", keymaps.open_index, function()
@@ -136,18 +133,18 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimBacklinks", function()
     require("denim.telescope").backlinks()
   end, { desc = "Show backlinks to current note" })
-  vim.api.nvim_create_user_command("DenimRefactor", notes.refactor, {
-    desc = "Refactor current note (rename + retag)",
-  })
-  vim.api.nvim_create_user_command("DenimNew", notes.new_note, {
-    desc = "Create a new note in inbox",
-  })
-  vim.api.nvim_create_user_command("DenimNewFromTemplate", notes.new_note_from_template, {
-    desc = "Create a new note from a template",
-  })
-  vim.api.nvim_create_user_command("DenimNewTemplate", notes.new_template, {
-    desc = "Create a new template",
-  })
+  vim.api.nvim_create_user_command("DenimRefactor", function()
+    require("denim.notes").refactor()
+  end, { desc = "Refactor current note (rename + retag)" })
+  vim.api.nvim_create_user_command("DenimNew", function()
+    require("denim.notes").new_note()
+  end, { desc = "Create a new note in inbox" })
+  vim.api.nvim_create_user_command("DenimNewFromTemplate", function()
+    require("denim.notes").new_note_from_template()
+  end, { desc = "Create a new note from a template" })
+  vim.api.nvim_create_user_command("DenimNewTemplate", function()
+    require("denim.notes").new_template()
+  end, { desc = "Create a new template" })
   vim.api.nvim_create_user_command("DenimTemplates", function()
     require("denim.telescope").search_templates()
   end, { desc = "Browse and edit templates" })
@@ -166,15 +163,15 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimRenameTag", function()
     require("denim.telescope").rename_tag()
   end, { desc = "Rename a tag across all notes" })
-  vim.api.nvim_create_user_command("DenimPasteImage", notes.paste_image, {
-    desc = "Paste image from clipboard",
-  })
-  vim.api.nvim_create_user_command("DenimNewTodo", notes.new_todo, {
-    desc = "Create a new todo",
-  })
-  vim.api.nvim_create_user_command("DenimTodoDone", notes.todo_done, {
-    desc = "Mark current todo as done",
-  })
+  vim.api.nvim_create_user_command("DenimPasteImage", function()
+    require("denim.notes").paste_image()
+  end, { desc = "Paste image from clipboard" })
+  vim.api.nvim_create_user_command("DenimNewTodo", function()
+    require("denim.notes").new_todo()
+  end, { desc = "Create a new todo" })
+  vim.api.nvim_create_user_command("DenimTodoDone", function()
+    require("denim.notes").todo_done()
+  end, { desc = "Mark current todo as done" })
   vim.api.nvim_create_user_command("DenimOpenTodos", function()
     require("denim.telescope").list_open_todos()
   end, { desc = "List open todos" })

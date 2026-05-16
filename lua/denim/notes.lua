@@ -12,6 +12,7 @@ local resolve_slug       = utils.resolve_slug
 
 function M.new_note()
   local opts = get_opts()
+  vim.fn.mkdir(opts.notes_dir, "p")
 
   vim.ui.input({ prompt = "Note name: " }, function(name)
     if not name or name == "" then return end
@@ -107,6 +108,7 @@ end
 
 function M.new_note_from_template()
   local opts = get_opts()
+  vim.fn.mkdir(opts.notes_dir, "p")
 
   require("denim.telescope").pick_template(function(tmpl_path)
     vim.ui.input({ prompt = "Note name: " }, function(name)
@@ -160,6 +162,7 @@ end
 
 function M.new_todo()
   local opts = get_opts()
+  vim.fn.mkdir(opts.notes_dir, "p")
 
   vim.ui.input({ prompt = "Todo name: " }, function(name)
     if not name or name == "" then return end
@@ -284,6 +287,7 @@ function M.paste_image()
   end
 
   local opts = get_opts()
+  vim.fn.mkdir(opts.notes_dir, "p")
 
   vim.ui.input({ prompt = "Image name: " }, function(name)
     if not name or name == "" then return end

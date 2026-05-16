@@ -51,6 +51,7 @@
 ```lua
 {
   "siatko/denim.nvim",
+  event = "VeryLazy",
   dependencies = {
     "nvim-telescope/telescope.nvim",
     "HakonHarnes/img-clip.nvim",
@@ -270,6 +271,7 @@ Clone the repo and point lazy.nvim at the local path:
 ```lua
 {
   dir = "~/path/to/denim.nvim",
+  event = "VeryLazy",
   dependencies = {
     "nvim-telescope/telescope.nvim",
     "HakonHarnes/img-clip.nvim",
