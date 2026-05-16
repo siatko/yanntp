@@ -60,6 +60,7 @@
   dependencies = {
     "nvim-telescope/telescope.nvim",
     "HakonHarnes/img-clip.nvim",
+    "folke/which-key.nvim",
   },
   config = function()
     require("denim").setup({
@@ -314,6 +315,7 @@ Clone the repo and point lazy.nvim at the local path:
   dependencies = {
     "nvim-telescope/telescope.nvim",
     "HakonHarnes/img-clip.nvim",
+    "folke/which-key.nvim",
   },
   config = function()
     require("denim").setup({ notes_dir = "~/notes" })
