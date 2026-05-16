@@ -295,6 +295,18 @@ make test
 
 Tests cover pure helpers in `utils.lua`, the index line builder in `index.lua`, and integration tests for all user-facing operations.
 
+## Contributing
+
+PRs and issues are very welcome. One rule: **every change must be covered by tests.** This is the most important thing. Tests are what keep the plugin reliable as it grows, and no PR will be merged without them.
+
+- Bug fix - add a regression test that would have caught it
+- New feature in `notes.lua` - add integration specs in `tests/integration_spec.lua`
+- New pure helper in `utils.lua` - add unit specs in `tests/utils_spec.lua`
+
+Tests are run automatically on every push and pull request via GitHub Actions. You can run them locally with `make test` (requires plenary.nvim at `~/.local/share/nvim/lazy/plenary.nvim`).
+
+See `CLAUDE.md` for a full overview of the architecture and testing conventions.
+
 ## A Note on How This Was Built
 
 I'm a dad with a full-time job and approximately 45 minutes of free time per week. This plugin exists because I pair programmed it with [Claude Code](https://claude.ai/code) - which turns out to be a pretty good way to ship a Neovim plugin when your other option is waiting until your child moves out.
