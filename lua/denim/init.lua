@@ -95,6 +95,11 @@ function M.setup(opts)
         require("denim.notes").todo_done()
       end, { desc = "denim: mark current todo as done" })
     end
+    if keymaps.todo_undone then
+      vim.keymap.set("n", keymaps.todo_undone, function()
+        require("denim.notes").todo_undone()
+      end, { desc = "denim: reopen done todo" })
+    end
     if keymaps.open_index then
       vim.keymap.set("n", keymaps.open_index, function()
         require("denim.index").open()
@@ -180,6 +185,9 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimTodoDone", function()
     require("denim.notes").todo_done()
   end, { desc = "Mark current todo as done" })
+  vim.api.nvim_create_user_command("DenimTodoUndone", function()
+    require("denim.notes").todo_undone()
+  end, { desc = "Reopen a done todo" })
   vim.api.nvim_create_user_command("DenimOpenTodos", function()
     require("denim.telescope").list_open_todos()
   end, { desc = "List open todos" })

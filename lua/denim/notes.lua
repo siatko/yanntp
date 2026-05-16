@@ -246,6 +246,33 @@ function M.todo_done()
   vim.notify("denim: done — " .. new_filename, vim.log.levels.INFO)
 end
 
+function M.todo_undone()
+  local opts     = get_opts()
+  local filepath = vim.fn.expand("%:p")
+
+  if not vim.startswith(filepath, opts.notes_dir) then
+    vim.notify("denim: current file is not in notes directory", vim.log.levels.WARN)
+    return
+  end
+
+  local filename = vim.fn.fnamemodify(filepath, ":t")
+
+  if not filename:find("-X-", 1, true) then
+    vim.notify("denim: current file is not a done todo", vim.log.levels.WARN)
+    return
+  end
+
+  local new_filename = filename:gsub("%-X%-", "-O-", 1)
+  local new_filepath = vim.fn.fnamemodify(filepath, ":h") .. "/" .. new_filename
+
+  local old_buf = vim.api.nvim_get_current_buf()
+  vim.fn.rename(filepath, new_filepath)
+  require("denim.telescope").update_links_to(filepath, new_filepath)
+  vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
+  vim.api.nvim_buf_delete(old_buf, { force = true })
+  vim.notify("denim: reopened — " .. new_filename, vim.log.levels.INFO)
+end
+
 function M.refactor()
   local opts     = get_opts()
   local filepath = vim.fn.expand("%:p")

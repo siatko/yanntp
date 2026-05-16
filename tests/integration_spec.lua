@@ -274,6 +274,86 @@ describe("integration", function()
     end)
   end)
 
+  -- ─── todo_undone ─────────────────────────────────────────────────────────────
+
+  describe("todo_undone", function()
+    it("renames -X- to -O-", function()
+      local path = dir .. "/20260514-X-fix-bug.md"
+      write_file(path, { "# FIX BUG", "" })
+      open_buf(path)
+      notes.todo_undone()
+      assert.equal(0, vim.fn.filereadable(path))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514-O-fix-bug.md"))
+    end)
+
+    it("preserves tags when reopening", function()
+      local path = dir .. "/20260514-X-tagged__work_urgent.md"
+      write_file(path, { "# TAGGED", "" })
+      open_buf(path)
+      notes.todo_undone()
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514-O-tagged__work_urgent.md"))
+    end)
+
+    it("does not rename a plain note", function()
+      local path = dir .. "/20260514--not-a-todo.md"
+      write_file(path, { "# NOT A TODO", "" })
+      open_buf(path)
+      notes.todo_undone()
+      assert.equal(1, vim.fn.filereadable(path))
+    end)
+
+    it("does not rename an open todo", function()
+      local path = dir .. "/20260514-O-open-todo.md"
+      write_file(path, { "# OPEN TODO", "" })
+      open_buf(path)
+      notes.todo_undone()
+      assert.equal(1, vim.fn.filereadable(path))
+    end)
+
+    it("warns when the current file is outside the notes directory", function()
+      local tmp = vim.fn.tempname() .. "-X-outside.md"
+      write_file(tmp, { "# OUTSIDE TODO", "" })
+      open_buf(tmp)
+      local warned = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
+      notes.todo_undone()
+      vim.notify = orig_notify
+      assert.truthy(warned)
+      assert.equal(1, vim.fn.filereadable(tmp))
+      vim.fn.delete(tmp)
+    end)
+
+    it("updates backlinks when reopening", function()
+      local path   = dir .. "/20260514-X-fix-bug.md"
+      local linker = dir .. "/20260514--linker.md"
+      write_file(path,   { "# FIX BUG", "" })
+      write_file(linker, { "# LINKER", "", "see [Fix Bug](20260514-X-fix-bug.md)" })
+      open_buf(path)
+      notes.todo_undone()
+      local line = vim.fn.readfile(linker)[3]
+      assert.truthy(line:find("20260514-O-fix-bug.md", 1, true))
+      assert.falsy(line:find("20260514-X-fix-bug.md", 1, true))
+    end)
+
+    it("closes the old buffer after reopening", function()
+      local path = dir .. "/20260514-X-close-me.md"
+      write_file(path, { "# CLOSE ME", "" })
+      open_buf(path)
+      local old_buf = vim.api.nvim_get_current_buf()
+      notes.todo_undone()
+      assert.falsy(vim.api.nvim_buf_is_valid(old_buf))
+    end)
+
+    it("opens the reopened file in the current window", function()
+      local path = dir .. "/20260514-X-open-me.md"
+      write_file(path, { "# OPEN ME", "" })
+      open_buf(path)
+      notes.todo_undone()
+      assert.equal(dir .. "/20260514-O-open-me.md", vim.fn.expand("%:p"))
+    end)
+  end)
+
   -- ─── follow_link ─────────────────────────────────────────────────────────────
 
   describe("follow_link", function()
