@@ -33,7 +33,8 @@
 - **Tag rename** - rename a tag across all notes in one step; all affected files and backlinks updated automatically
 - **Templates** - create notes from `.md` files in `notes_dir/.templates/`; place `$` in a template for cursor stops - Tab steps through each one; templates are excluded from all search results
 - **Full-text search** - live grep across all note contents
-- **Note linking** - insert markdown links to other notes, follow links with `<CR>`
+- **Note linking** - insert markdown links to other notes, follow links with `<CR>` or ctrl+click
+- **URL linking** - insert URL links from clipboard with `<leader>nu`; `<CR>` and ctrl+click on URL links open the browser
 - **Backlinks** - find all notes that link to the current note
 - **Refactor** - rename and retag the current note in one step; all linking notes updated automatically
 - **Image paste** - paste clipboard images via img-clip, saved as `YYYYMMDD--name__tags.ext`
@@ -84,6 +85,7 @@ require("denim").setup({
     refactor          = "<leader>nr",
     paste_image       = "<leader>np",
     insert_link       = "<leader>nl",
+    insert_url_link   = "<leader>nu",
     backlinks         = "<leader>nb",
     -- templates
     new_from_template = "<leader>ntn",
@@ -117,6 +119,7 @@ require("denim").setup({
 | `<leader>nr` | Refactor current note (rename + retag) |
 | `<leader>np` | Paste image from clipboard |
 | `<leader>nl` | Insert link to another note |
+| `<leader>nu` | Insert URL link from clipboard |
 | `<leader>nb` | Show backlinks to current note |
 | `<leader>ntn` | New note from template |
 | `<leader>ntN` | New template |
@@ -183,6 +186,16 @@ The ID never changes, so links never break - even after a rename. denim takes a 
 ```
 
 This means denim has to rewrite backlinks whenever a file is renamed (which it does automatically). That is a small price to pay for a significant gain: your notes are **plain readable markdown** that works everywhere - GitHub, Obsidian, any static site generator, or a plain text editor - with no plugin needed to resolve links. ID-based links are opaque outside of Emacs and lock your notes to the tool that created them. denim's goal is the opposite: the plugin is a convenience layer, and your notes should outlive it.
+
+## URL Links
+
+`<leader>nu` (or `:DenimInsertUrlLink`) inserts a markdown link to an external URL at the cursor position. The URL prompt is pre-filled with the clipboard contents; the title prompt is empty.
+
+```markdown
+[My favourite video](https://youtube.com/watch?v=dQw4w9WgXcQ)
+```
+
+Pressing `<CR>` or ctrl+clicking on a URL link opens it in the browser via `xdg-open` instead of trying to follow it as a note file.
 
 ## Tag Workflow
 
@@ -278,6 +291,7 @@ Attendees: $
 | `:DenimUntagged` | List notes without tags |
 | `:DenimRenameTag` | Rename a tag across all notes |
 | `:DenimInsertLink` | Insert link to another note |
+| `:DenimInsertUrlLink` | Insert URL link from clipboard |
 | `:DenimBacklinks` | Show backlinks to current note |
 | `:DenimPasteImage` | Paste image from clipboard |
 | `:DenimRefactor` | Refactor current note (rename + retag) |
