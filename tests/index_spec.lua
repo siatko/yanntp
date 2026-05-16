@@ -50,6 +50,22 @@ describe("build_lines", function()
     assert.truthy(vim.tbl_contains(lines, "## 2026-05-13"))
   end)
 
+  it("inserts a blank line between different-date groups", function()
+    local notes = {
+      { date = "20260514", date_fmt = "2026-05-14", status = "note",
+        title = "Note A", rel_path = "inbox/a.md" },
+      { date = "20260513", date_fmt = "2026-05-13", status = "note",
+        title = "Note B", rel_path = "inbox/b.md" },
+    }
+    local lines = build_lines(notes)
+    local pos13
+    for i, l in ipairs(lines) do
+      if l == "## 2026-05-13" then pos13 = i end
+    end
+    assert.truthy(pos13)
+    assert.equal("", lines[pos13 - 1])
+  end)
+
   it("does not repeat date header for same-day notes", function()
     local notes = {
       { date = "20260514", date_fmt = "2026-05-14", status = "note",

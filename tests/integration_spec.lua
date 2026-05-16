@@ -73,13 +73,12 @@ describe("integration", function()
   -- ─── new_note ────────────────────────────────────────────────────────────────
 
   describe("new_note", function()
-    it("creates file with correct name, heading and tags", function()
+    it("creates file with correct name and tags", function()
       mock_input("my test note")
       mock_tags({ "lua", "nvim" })
       notes.new_note()
       local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--my-test-note__lua_nvim.md"
       wait_for(expected)
-      assert.equal("# MY TEST NOTE", vim.fn.readfile(expected)[1])
     end)
 
     it("sorts tags alphabetically in filename", function()
@@ -122,18 +121,24 @@ describe("integration", function()
       flush()
       assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
     end)
+
+    it("does nothing when name input is empty string", function()
+      mock_input("")
+      notes.new_note()
+      flush()
+      assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
+    end)
   end)
 
   -- ─── new_todo ────────────────────────────────────────────────────────────────
 
   describe("new_todo", function()
-    it("creates -O- file with correct name and heading", function()
+    it("creates -O- file with correct name", function()
       mock_input("fix the bug")
       mock_tags({ "backend" })
       notes.new_todo()
       local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-fix-the-bug__backend.md"
       wait_for(expected)
-      assert.equal("# FIX THE BUG", vim.fn.readfile(expected)[1])
     end)
 
     it("creates -O- file without tags", function()
@@ -164,6 +169,13 @@ describe("integration", function()
 
     it("does nothing when name input is cancelled", function()
       mock_input(nil)
+      notes.new_todo()
+      flush()
+      assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
+    end)
+
+    it("does nothing when name input is empty string", function()
+      mock_input("")
       notes.new_todo()
       flush()
       assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
@@ -204,6 +216,18 @@ describe("integration", function()
       open_buf(path)
       notes.todo_done()
       assert.equal(1, vim.fn.filereadable(path))
+    end)
+
+    it("warns when the current file is an already-done todo", function()
+      local path = dir .. "/20260514-X-done-todo.md"
+      write_file(path, { "# DONE TODO", "" })
+      open_buf(path)
+      local warned = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
+      notes.todo_done()
+      vim.notify = orig_notify
+      assert.truthy(warned)
     end)
 
     it("warns when the current file is outside the notes directory", function()
@@ -298,9 +322,9 @@ describe("integration", function()
   -- ─── refactor ────────────────────────────────────────────────────────────────
 
   describe("refactor", function()
-    it("renames file and updates heading", function()
+    it("renames file", function()
       local orig = dir .. "/20260514--old-name__tag1.md"
-      write_file(orig, { "# OLD NAME", "" })
+      write_file(orig, { "some content" })
       open_buf(orig)
       mock_input("new name")
       mock_tags({ "tag1" })
@@ -308,7 +332,7 @@ describe("integration", function()
       local new = dir .. "/20260514--new-name__tag1.md"
       wait_for(new)
       assert.equal(0, vim.fn.filereadable(orig))
-      assert.equal("# NEW NAME", vim.fn.readfile(new)[1])
+      assert.equal("some content", vim.fn.readfile(new)[1])
     end)
 
     it("retags without renaming", function()
@@ -482,19 +506,7 @@ describe("integration", function()
       assert.equal(1, vim.fn.filereadable(new))
     end)
 
-    it("preserves heading when name is empty but tags change", function()
-      local orig = dir .. "/20260514--my-note__old.md"
-      write_file(orig, { "# MY NOTE", "" })
-      open_buf(orig)
-      mock_input("")
-      mock_tags({ "new" })
-      notes.refactor()
-      local new = dir .. "/20260514--my-note__new.md"
-      wait_for(new)
-      assert.equal("# MY NOTE", vim.fn.readfile(new)[1])
-    end)
-
-    it("renames without modifying content when there is no H1 heading", function()
+    it("preserves file content when renaming", function()
       local orig = dir .. "/20260514--no-heading.md"
       write_file(orig, { "some content", "second line" })
       open_buf(orig)
@@ -741,7 +753,7 @@ describe("integration", function()
       assert.truthy(notified)
     end)
 
-    it("creates file with template body below the generated title", function()
+    it("creates file with template content", function()
       local tmpl = make_template("meeting", { "## Attendees", "", "## Action Items" })
       mock_template(tmpl)
       mock_input("team sync")
@@ -750,12 +762,11 @@ describe("integration", function()
       local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--team-sync.md"
       wait_for(expected)
       local lines = vim.fn.readfile(expected)
-      assert.equal("# TEAM SYNC", lines[1])
-      assert.equal("## Attendees", lines[3])
-      assert.equal("## Action Items", lines[5])
+      assert.equal("## Attendees", lines[1])
+      assert.equal("## Action Items", lines[3])
     end)
 
-    it("skips an H1 heading in the template", function()
+    it("uses template content as-is including any H1 heading", function()
       local tmpl = make_template("daily", { "# Daily Note", "", "## Log" })
       mock_template(tmpl)
       mock_input("monday")
@@ -764,7 +775,7 @@ describe("integration", function()
       local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--monday.md"
       wait_for(expected)
       local lines = vim.fn.readfile(expected)
-      assert.equal("# MONDAY", lines[1])
+      assert.equal("# Daily Note", lines[1])
       assert.equal("## Log", lines[3])
     end)
 
@@ -813,10 +824,10 @@ describe("integration", function()
       wait_for(expected)
       flush()
       local cursor = vim.api.nvim_win_get_cursor(0)
-      assert.equal(3, cursor[1])   -- line 3: "## Topic: $"
+      assert.equal(1, cursor[1])   -- line 1: "## Topic: $"
       assert.equal(10, cursor[2])  -- col 10 (0-based), right where $ was
       local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      assert.equal("## Topic: ", lines[3])
+      assert.equal("## Topic: ", lines[1])
     end)
 
     it("sets a buffer-local insert-mode Tab keymap when stops exist", function()
@@ -854,11 +865,11 @@ describe("integration", function()
       assert.truthy(tab_fn, "Tab keymap not set")
       tab_fn()
       local cursor = vim.api.nvim_win_get_cursor(0)
-      assert.equal(4, cursor[1])  -- line 4: "Date: $"
+      assert.equal(2, cursor[1])  -- line 2: "Date: $"
       assert.equal(6, cursor[2])  -- col 6, right where $ was
       local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      assert.equal("Name: ", lines[3])
-      assert.equal("Date: ", lines[4])
+      assert.equal("Name: ", lines[1])
+      assert.equal("Date: ", lines[2])
     end)
 
     it("removes the Tab keymap after the last stop is consumed", function()
@@ -885,7 +896,7 @@ describe("integration", function()
       assert.falsy(has_tab)
     end)
 
-    it("falls back to line 2 col 0 and sets no Tab keymap when template has no stops", function()
+    it("falls back to line 1 col 0 and sets no Tab keymap when template has no stops", function()
       local tmpl = make_template("plain", { "Just plain content" })
       mock_template(tmpl)
       mock_input("no stops")
@@ -895,7 +906,7 @@ describe("integration", function()
       wait_for(expected)
       flush()
       local cursor = vim.api.nvim_win_get_cursor(0)
-      assert.equal(2, cursor[1])
+      assert.equal(1, cursor[1])
       assert.equal(0, cursor[2])
       local bufnr = vim.api.nvim_get_current_buf()
       local has_tab = false
@@ -1033,6 +1044,13 @@ describe("integration", function()
       local bufnr = vim.api.nvim_get_current_buf()
       vim.cmd("bdelete")
       assert.falsy(vim.api.nvim_buf_is_loaded(bufnr))
+    end)
+
+    it("falls back to filename stem when note has no H1 heading", function()
+      write_file(dir .. "/20260514--no-heading.md", { "just some content", "" })
+      idx.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.truthy(vim.tbl_contains(lines, "- [20260514--no-heading](20260514--no-heading.md)"))
     end)
   end)
 

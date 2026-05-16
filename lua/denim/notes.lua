@@ -32,10 +32,10 @@ function M.new_note()
           return
         end
 
-        vim.fn.writefile({ "# " .. name:upper(), "" }, filepath)
+        vim.fn.writefile({}, filepath)
         vim.cmd("edit " .. vim.fn.fnameescape(filepath))
         vim.schedule(function()
-          vim.api.nvim_win_set_cursor(0, { 2, 0 })
+          vim.api.nvim_win_set_cursor(0, { 1, 0 })
           vim.cmd("startinsert")
         end)
       end)
@@ -64,7 +64,7 @@ local function activate_tab_stops(bufnr)
   end
 
   if not has_stop then
-    vim.api.nvim_win_set_cursor(0, { 2, 0 })
+    vim.api.nvim_win_set_cursor(0, { 1, 0 })
     vim.cmd("startinsert")
     return
   end
@@ -130,16 +130,7 @@ function M.new_note_from_template()
           end
 
           local tmpl_lines = vim.fn.readfile(tmpl_path)
-          local body_start = 1
-          if tmpl_lines[1] and tmpl_lines[1]:match("^#%s") then
-            body_start = (tmpl_lines[2] == "") and 3 or 2
-          end
-          local lines = { "# " .. name:upper(), "" }
-          for i = body_start, #tmpl_lines do
-            table.insert(lines, tmpl_lines[i])
-          end
-
-          vim.fn.writefile(lines, filepath)
+          vim.fn.writefile(tmpl_lines, filepath)
           vim.cmd("edit " .. vim.fn.fnameescape(filepath))
           vim.schedule(function()
             activate_tab_stops(vim.api.nvim_get_current_buf())
@@ -182,10 +173,10 @@ function M.new_todo()
           return
         end
 
-        vim.fn.writefile({ "# " .. name:upper(), "" }, filepath)
+        vim.fn.writefile({}, filepath)
         vim.cmd("edit " .. vim.fn.fnameescape(filepath))
         vim.schedule(function()
-          vim.api.nvim_win_set_cursor(0, { 2, 0 })
+          vim.api.nvim_win_set_cursor(0, { 1, 0 })
           vim.cmd("startinsert")
         end)
       end)
@@ -240,13 +231,10 @@ function M.refactor()
   local date_and_marker = base:match("^(%d+T?%d*%-[OX]%-)") or base:match("^(%d+T?%d*%-%-)")
   local current_slug    = date_and_marker and base:sub(#date_and_marker + 1) or base
 
-  local file_lines  = vim.fn.readfile(filepath, "", 1)
-  local current_title = (file_lines[1] and file_lines[1]:match("^#%s+(.+)$")) or current_slug
-
-  vim.ui.input({ prompt = "Note name: ", default = current_title:lower() }, function(name)
+  vim.ui.input({ prompt = "Note name: ", default = current_slug }, function(name)
     if name == nil then return end
 
-    local new_slug = resolve_slug(name, current_title, current_slug)
+    local new_slug = resolve_slug(name, current_slug, current_slug)
 
     vim.schedule(function()
       require("denim.telescope").pick_tags(function(tags)
@@ -263,13 +251,6 @@ function M.refactor()
 
         local old_buf = vim.api.nvim_get_current_buf()
         vim.fn.rename(filepath, new_filepath)
-
-        local lines = vim.fn.readfile(new_filepath)
-        if name ~= "" and lines and lines[1] and lines[1]:match("^#%s") then
-          lines[1] = "# " .. name:upper()
-          vim.fn.writefile(lines, new_filepath)
-        end
-
         require("denim.telescope").update_links_to(filepath, new_filepath)
         vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
         vim.api.nvim_buf_delete(old_buf, { force = true })
