@@ -12,8 +12,8 @@
  |  _______________  |   just a really
  |  _______________  |   long filename.
  |  _______          |
- |                   |
- |___________________|
+ |                   |   yet another denote
+ |___________________|   plugin nobody asked for.
 ```
 
 ![Tests](https://github.com/siatko/denim.nvim/actions/workflows/test.yml/badge.svg)
