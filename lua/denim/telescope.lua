@@ -305,13 +305,16 @@ function M.pick_tags(callback, opts)
           local pre_set = {}
           for _, t in ipairs(pre_selected) do pre_set[t] = true end
           pcall(function()
-            local num = picker.manager:num_results()
-            local current = picker.selection_row or 0  -- 0-indexed visual row
-            for i = 1, num do
-              local entry = picker.manager:get_entry(i)
+            local num      = picker.manager:num_results()
+            local current  = picker:get_selection_row()
+            local reset    = picker:get_reset_row()
+            local dir      = (picker.sorting_strategy == "ascending") and 1 or -1
+            for step = 0, num - 1 do
+              local row   = reset + dir * step
+              local entry = picker.manager:get_entry(picker:get_index(row))
               if entry and pre_set[entry.value] then
-                picker:move_selection((i - 1) - current)  -- entry i sits at visual row i-1
-                current = i - 1
+                picker:move_selection(row - current)
+                current = row
                 actions.toggle_selection(prompt_bufnr)
               end
             end

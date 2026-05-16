@@ -2031,8 +2031,11 @@ describe("integration", function()
               num_results = function(_) return #res end,
               get_entry   = function(_, i) return res[i] and { value = res[i] } or nil end,
             },
-            selection_row  = cursor,
-            move_selection = function(_, delta) cursor = cursor + delta end,
+            sorting_strategy  = "ascending",
+            get_selection_row = function(_) return cursor end,
+            get_reset_row     = function(_) return 0 end,
+            get_index         = function(_, row) return row + 1 end,
+            move_selection    = function(_, delta) cursor = cursor + delta end,
           }
         end,
         get_current_line = function() return get_step().prompt or "" end,
@@ -2343,6 +2346,142 @@ describe("integration", function()
       h.enter()
       vim.wait(200, function() return result ~= nil end, 10)
       assert.same({}, result)
+      h.cleanup()
+    end)
+
+    -- ─── descending-strategy mock (reproduces real Telescope behavior) ─────────
+    --
+    -- setup_rich_mock sets selection_row on the picker table, so
+    -- picker.selection_row or 0 returns the correct cursor.  Real Telescope stores
+    -- the cursor as picker._selection_row (private field), so picker.selection_row
+    -- is always nil and the denim code always starts with current=0.
+    --
+    -- Telescope's default sorting_strategy is "descending": the cursor starts at
+    -- visual row max_results-1 (bottom), and get_index(row) = max_results - row,
+    -- so the entry at manager index i is at visual row max_results-i.  The denim
+    -- code assumes entry i is at row i-1 (ascending), so move_selection lands on
+    -- the wrong row and toggles the wrong tag.
+
+    local function setup_descending_mock(steps, max_r)
+      -- max_r: simulated max_results (results window height, default 10)
+      max_r = max_r or 10
+      if type(steps[1]) ~= "table" then steps = { steps } end
+
+      local handles       = { open_count = 0 }
+      local step          = 0
+      local sel_row       = max_r - 1  -- cursor at bottom, as in descending Telescope
+      local toggled       = {}
+      local finder_res    = {}
+      local prompt_buf    = vim.api.nvim_create_buf(false, true)
+      local orig_defer    = vim.defer_fn
+      local pending_defer = nil
+
+      local function get_step()
+        return steps[math.max(1, math.min(step, #steps))]
+      end
+
+      vim.defer_fn = function(fn, _) pending_defer = fn end
+
+      package.loaded["telescope.finders"] = {
+        new_table = function(o)
+          finder_res = vim.deepcopy(o.results)
+          return {}
+        end,
+      }
+      package.loaded["telescope.config"] = { values = { generic_sorter = function() return {} end } }
+      package.loaded["telescope.actions"] = {
+        select_default   = { replace = function(_, fn) handles.enter = fn end },
+        close            = function() end,
+        toggle_selection = function()
+          -- descending: get_index(row) = max_r - row
+          -- so entry at current visual row sel_row has manager index (max_r - sel_row)
+          local idx = max_r - sel_row
+          if finder_res[idx] then
+            table.insert(toggled, finder_res[idx])
+          end
+        end,
+      }
+      package.loaded["telescope.actions.state"] = {
+        get_current_picker = function()
+          local res = finder_res
+          return {
+            sorting_strategy  = "descending",
+            get_selection_row = function(_) return sel_row end,
+            get_reset_row     = function(_) return max_r - 1 end,
+            get_index         = function(_, row) return max_r - row end,
+            get_multi_selection = function()
+              return vim.tbl_map(function(v) return { value = v } end, toggled)
+            end,
+            manager = {
+              num_results = function() return #res end,
+              get_entry   = function(_, i) return res[i] and { value = res[i] } or nil end,
+            },
+            move_selection = function(_, delta)
+              sel_row = sel_row + delta
+              if sel_row < 0      then sel_row = 0        end
+              if sel_row >= max_r then sel_row = max_r - 1 end
+            end,
+          }
+        end,
+        get_current_line = function() return get_step().prompt or "" end,
+      }
+      package.loaded["telescope.pickers"] = {
+        new = function(_, picker_opts)
+          step             = step + 1
+          handles.open_count = step
+          sel_row          = max_r - 1  -- reset to bottom on each new picker
+          toggled          = {}
+          pending_defer    = nil
+          return {
+            find = function()
+              local function map(mode, key, fn)
+                if mode == "n" and key == "<Esc>" then handles.escape = fn end
+              end
+              picker_opts.attach_mappings(prompt_buf, map)
+              if pending_defer then
+                local fn = pending_defer
+                pending_defer = nil
+                fn()
+              end
+            end,
+          }
+        end,
+      }
+      handles.get_finder_res = function() return finder_res end
+      handles.get_toggled    = function() return toggled end
+      handles.cleanup = function()
+        vim.defer_fn = orig_defer
+        pcall(vim.api.nvim_buf_delete, prompt_buf, { force = true })
+      end
+      return handles
+    end
+
+    it("[bug] pre-selects newly typed tag when it sorts after an existing disk tag", function()
+      -- Disk tag: "aaa".  User types "zzz" -> picker re-opens with pre_selected={"zzz"}.
+      -- Sorted tags: ["aaa", "zzz"]. In a descending picker (max_r=10):
+      --   "aaa" at manager index 1, visual row 9 (bottom) - cursor starts here.
+      --   "zzz" at manager index 2, visual row 8.
+      -- Bug: picker.selection_row is nil so current=0; move_selection(1) moves the
+      -- cursor from row 9 to 10, clamped back to 9, toggling "aaa" instead of "zzz".
+      write_file(dir .. "/20240101T120000--n1__aaa.md", { "# N1" })
+      local h = setup_descending_mock({ prompt = "" })
+      tel.pick_tags(function() end, { pre_selected = { "zzz" }, extra_tags = { "zzz" } })
+      assert.same({ "zzz" }, h.get_toggled(),
+        "zzz should be pre-selected, not the existing disk tag aaa")
+      h.cleanup()
+    end)
+
+    it("[bug] pre-selects multiple tags correctly in descending picker", function()
+      -- Disk tags: "aaa", "bbb", "ccc". pre_selected={"aaa","ccc"} (refactor flow).
+      -- Bug: after toggling "aaa" (which happens to be correct because move_selection(0)
+      -- keeps cursor at the bottom row pointing at manager index 1 = "aaa"), current is
+      -- still tracked as 0, so the delta for "ccc" is (3-1)-0=2, cursor goes to 11
+      -- (clamped to 9), toggling manager index 1 = "aaa" again instead of "ccc".
+      write_file(dir .. "/20240101T120000--n1__aaa_bbb_ccc.md", { "# N1" })
+      local h = setup_descending_mock({ prompt = "" })
+      tel.pick_tags(function() end, { pre_selected = { "aaa", "ccc" } })
+      assert.same({ "aaa", "ccc" }, h.get_toggled(),
+        "both aaa and ccc should be pre-selected in descending picker")
       h.cleanup()
     end)
   end)
