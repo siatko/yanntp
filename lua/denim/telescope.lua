@@ -272,7 +272,19 @@ end
 function M.pick_tags(callback, opts)
   opts = opts or {}
   local pre_selected = opts.pre_selected or {}
+  local extra_tags   = opts.extra_tags or {}
   local all_tags     = collect_tags(get_opts().notes_dir)
+
+  -- Merge tags created this session (not yet on disk) into the list
+  local tag_set = {}
+  for _, t in ipairs(all_tags) do tag_set[t] = true end
+  for _, t in ipairs(extra_tags) do
+    if not tag_set[t] then
+      table.insert(all_tags, t)
+      tag_set[t] = true
+    end
+  end
+  table.sort(all_tags)
 
   local pickers      = require("telescope.pickers")
   local finders      = require("telescope.finders")
@@ -281,7 +293,7 @@ function M.pick_tags(callback, opts)
   local action_state = require("telescope.actions.state")
 
   pickers.new({}, {
-    prompt_title = opts.title or "Tags  (<Tab> multi-select, <Esc> skip)",
+    prompt_title = opts.title or "Tags  (<Tab> select · type new+<Enter> to add · empty <Enter> done)",
     finder = finders.new_table({ results = all_tags }),
     sorter = conf.generic_sorter({}),
     attach_mappings = function(prompt_bufnr, map)
@@ -294,16 +306,15 @@ function M.pick_tags(callback, opts)
           for _, t in ipairs(pre_selected) do pre_set[t] = true end
           pcall(function()
             local num = picker.manager:num_results()
-            local current = picker.selection_row or 1
+            local current = picker.selection_row or 0  -- 0-indexed visual row
             for i = 1, num do
               local entry = picker.manager:get_entry(i)
               if entry and pre_set[entry.value] then
-                picker:move_selection(i - current)
-                current = i
+                picker:move_selection((i - 1) - current)  -- entry i sits at visual row i-1
+                current = i - 1
                 actions.toggle_selection(prompt_bufnr)
               end
             end
-            picker:move_selection(1 - current)
           end)
         end, 50)
       end
@@ -314,35 +325,44 @@ function M.pick_tags(callback, opts)
         local prompt_text = vim.trim(action_state.get_current_line())
         local selected    = {}
 
-        if #multi > 0 then
-          for _, e in ipairs(multi) do
-            table.insert(selected, e.value)
-          end
-        elseif prompt_text == "" then
+        for _, e in ipairs(multi) do
+          table.insert(selected, e.value)
+        end
+
+        if prompt_text == "" then
           actions.close(prompt_bufnr)
-          vim.schedule(function() callback({}) end)
+          vim.schedule(function() callback(selected) end)
           return
         end
 
-        if prompt_text ~= "" then
-          local found = false
-          for _, s in ipairs(selected) do
-            if s == prompt_text then found = true; break end
+        -- Parse space-separated new tags, then re-open with everything pre-selected
+        local new_extra = vim.deepcopy(extra_tags)
+        for word in prompt_text:gmatch("%S+") do
+          local tag = slugify_tag(word)
+          if tag ~= "" then
+            local found = false
+            for _, s in ipairs(selected) do
+              if s == tag then found = true; break end
+            end
+            if not found then table.insert(selected, tag) end
+            if not tag_set[tag] then
+              table.insert(new_extra, tag)
+              tag_set[tag] = true
+            end
           end
-          if not found then table.insert(selected, prompt_text) end
         end
 
         actions.close(prompt_bufnr)
-        vim.schedule(function() callback(selected) end)
+        vim.schedule(function()
+          M.pick_tags(callback, {
+            pre_selected = selected,
+            extra_tags   = new_extra,
+            title        = opts.title,
+          })
+        end)
       end)
-      map("n", "<Esc>", function()
-        actions.close(prompt_bufnr)
-        vim.schedule(function() callback(pre_selected) end)
-      end)
-      map("i", "<Esc>", function()
-        actions.close(prompt_bufnr)
-        vim.schedule(function() callback(pre_selected) end)
-      end)
+      map("n", "<Esc>", function() actions.close(prompt_bufnr) end)
+      map("i", "<Esc>", function() actions.close(prompt_bufnr) end)
       return true
     end,
   }):find()

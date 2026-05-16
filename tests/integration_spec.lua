@@ -1536,21 +1536,33 @@ describe("integration", function()
       "telescope.pickers", "telescope.finders",
       "telescope.config", "telescope.actions", "telescope.actions.state",
     }
+    local saved_defer_fn
 
     before_each(function()
+      saved_defer_fn = vim.defer_fn
       for _, mod in ipairs(telescope_modules) do
         saved[mod] = package.loaded[mod]
       end
     end)
 
     after_each(function()
+      vim.defer_fn = saved_defer_fn
       for _, mod in ipairs(telescope_modules) do
         package.loaded[mod] = saved[mod]
       end
     end)
 
-    local function setup_mock(opts)
-      local handles = {}
+    local function setup_mock(steps)
+      -- Normalize: single step object {multi=..., prompt=...} becomes {steps}
+      if type(steps[1]) ~= "table" then steps = { steps } end
+
+      local handles = { open_count = 0 }
+      local step    = 0
+
+      local function get_step()
+        return steps[math.max(1, math.min(step, #steps))]
+      end
+
       package.loaded["telescope.actions"] = {
         select_default   = { replace = function(_, fn) handles.enter = fn end },
         close            = function() end,
@@ -1558,23 +1570,26 @@ describe("integration", function()
       }
       package.loaded["telescope.actions.state"] = {
         get_current_picker = function()
+          local s = get_step()
           return {
-            get_multi_selection = function() return opts.multi or {} end,
+            get_multi_selection = function() return s.multi or {} end,
             manager             = { num_results = function() return 0 end, get_entry = function() return nil end },
             selection_row       = 1,
             move_selection      = function() end,
           }
         end,
-        get_current_line = function() return opts.prompt or "" end,
+        get_current_line = function() return get_step().prompt or "" end,
       }
       package.loaded["telescope.pickers"] = {
         new = function(_, picker_opts)
+          step = step + 1
+          handles.open_count = step
           return {
             find = function()
               local function map(mode, key, fn)
                 if mode == "n" and key == "<Esc>" then handles.escape = fn end
               end
-              picker_opts.attach_mappings(1, map)
+              picker_opts.attach_mappings(vim.api.nvim_get_current_buf(), map)
             end,
           }
         end,
@@ -1594,14 +1609,14 @@ describe("integration", function()
       assert.same({}, result)
     end)
 
-    it("calls callback with pre_selected when user presses Escape", function()
+    it("does not call callback when user presses Escape (cancels the operation)", function()
       local h = setup_mock({ multi = {}, prompt = "" })
-      local result
-      tel.pick_tags(function(tags) result = tags end, { pre_selected = { "foo", "bar" } })
+      local called = false
+      tel.pick_tags(function() called = true end, { pre_selected = { "foo", "bar" } })
       assert.truthy(h.escape, "Escape handler was not registered")
       h.escape()
-      vim.wait(200, function() return result ~= nil end, 10)
-      assert.same({ "foo", "bar" }, result)
+      vim.wait(200, function() return false end, 10)
+      assert.falsy(called, "callback must not be called on Escape")
     end)
 
     it("calls callback with multi-selected items", function()
@@ -1614,34 +1629,416 @@ describe("integration", function()
       assert.same({ "lua", "nvim" }, result)
     end)
 
-    it("calls callback with typed tag when nothing is multi-selected", function()
-      local h = setup_mock({ multi = {}, prompt = "newtag" })
+    it("re-opens picker with typed tag pre-selected, finalizes on empty Enter", function()
+      local h = setup_mock({
+        { multi = {},                        prompt = "newtag" },
+        { multi = { { value = "newtag" } },  prompt = ""       },
+      })
       local result
       tel.pick_tags(function(tags) result = tags end, {})
       assert.truthy(h.enter)
+      h.enter()
+      vim.wait(200, function() return h.open_count >= 2 end, 10)
       h.enter()
       vim.wait(200, function() return result ~= nil end, 10)
       assert.same({ "newtag" }, result)
     end)
 
     it("does not duplicate typed tag when it matches a multi-selected item", function()
-      local h = setup_mock({ multi = { { value = "lua" } }, prompt = "lua" })
+      local h = setup_mock({
+        { multi = { { value = "lua" } }, prompt = "lua" },
+        { multi = { { value = "lua" } }, prompt = ""    },
+      })
       local result
       tel.pick_tags(function(tags) result = tags end, {})
       assert.truthy(h.enter)
+      h.enter()
+      vim.wait(200, function() return h.open_count >= 2 end, 10)
       h.enter()
       vim.wait(200, function() return result ~= nil end, 10)
       assert.same({ "lua" }, result)
     end)
 
     it("includes both multi-selected and typed tag when they differ", function()
-      local h = setup_mock({ multi = { { value = "lua" } }, prompt = "nvim" })
+      local h = setup_mock({
+        { multi = { { value = "lua" } },                         prompt = "nvim" },
+        { multi = { { value = "lua" }, { value = "nvim" } },     prompt = ""     },
+      })
       local result
       tel.pick_tags(function(tags) result = tags end, {})
       assert.truthy(h.enter)
       h.enter()
+      vim.wait(200, function() return h.open_count >= 2 end, 10)
+      h.enter()
       vim.wait(200, function() return result ~= nil end, 10)
       assert.same({ "lua", "nvim" }, result)
+    end)
+
+    -- ─── pre-selection + sorting (rich mock) ─────────────────────────────────
+
+    local function setup_rich_mock(steps)
+      -- Like setup_mock but with a real-ish manager so the defer_fn pre-selection
+      -- can be exercised. Cursor is 1-indexed to match Telescope's selection_row.
+      -- vim.defer_fn is intercepted so pre-selection is called synchronously in tests.
+      if type(steps[1]) ~= "table" then steps = { steps } end
+
+      local handles       = { open_count = 0 }
+      local step          = 0
+      local cursor        = 0  -- 0-indexed visual row, matching Telescope's selection_row
+      local toggled       = {}
+      local finder_res    = {}
+      local prompt_buf    = vim.api.nvim_create_buf(false, true)  -- scratch buf stays valid
+      local orig_defer    = vim.defer_fn
+      local pending_defer = nil
+
+      local function get_step()
+        return steps[math.max(1, math.min(step, #steps))]
+      end
+
+      -- Intercept defer_fn so we can trigger pre-selection on demand
+      vim.defer_fn = function(fn, _) pending_defer = fn end
+
+      package.loaded["telescope.finders"] = {
+        new_table = function(o)
+          finder_res = vim.deepcopy(o.results)
+          return {}
+        end,
+      }
+      package.loaded["telescope.config"] = { values = { generic_sorter = function() return {} end } }
+      package.loaded["telescope.actions"] = {
+        select_default   = { replace = function(_, fn) handles.enter = fn end },
+        close            = function() end,
+        toggle_selection = function()
+          -- cursor is 0-indexed; finder_res is 1-indexed
+          if finder_res[cursor + 1] then
+            table.insert(toggled, finder_res[cursor + 1])
+          end
+        end,
+      }
+      package.loaded["telescope.actions.state"] = {
+        get_current_picker = function()
+          local res = finder_res
+          return {
+            get_multi_selection = function(_)
+              return vim.tbl_map(function(v) return { value = v } end, toggled)
+            end,
+            manager = {
+              num_results = function(_) return #res end,
+              get_entry   = function(_, i) return res[i] and { value = res[i] } or nil end,
+            },
+            selection_row  = cursor,
+            move_selection = function(_, delta) cursor = cursor + delta end,
+          }
+        end,
+        get_current_line = function() return get_step().prompt or "" end,
+      }
+      package.loaded["telescope.pickers"] = {
+        new = function(_, picker_opts)
+          step             = step + 1
+          handles.open_count = step
+          cursor           = 0  -- reset to 0-indexed row 0 on each new picker
+          toggled          = {}
+          pending_defer    = nil
+          return {
+            find = function()
+              local function map(mode, key, fn)
+                if mode == "n" and key == "<Esc>" then handles.escape = fn end
+              end
+              picker_opts.attach_mappings(prompt_buf, map)
+              -- run any scheduled pre-selection immediately (synchronous in tests)
+              if pending_defer then
+                local fn = pending_defer
+                pending_defer = nil
+                fn()
+              end
+            end,
+          }
+        end,
+      }
+      handles.get_finder_res = function() return finder_res end
+      handles.get_toggled    = function() return toggled end
+      handles.cleanup = function()
+        vim.defer_fn = orig_defer
+        pcall(vim.api.nvim_buf_delete, prompt_buf, { force = true })
+      end
+      return handles
+    end
+
+    it("presents all tags in alphabetical order (including extra_tags)", function()
+      write_file(dir .. "/20240101T120000--n1__zzz.md",  { "# N1" })
+      write_file(dir .. "/20240101T120001--n2__bbb.md",  { "# N2" })
+      local h = setup_rich_mock({ prompt = "" })
+      tel.pick_tags(function() end, { extra_tags = { "mmm" } })
+      assert.same({ "bbb", "mmm", "zzz" }, h.get_finder_res())
+      h.cleanup()
+    end)
+
+    it("pre-selects extra_tags (new typed tags) when the picker re-opens", function()
+      write_file(dir .. "/20240101T120000--n1__bbb.md", { "# N1" })
+      local h = setup_rich_mock({
+        { multi = {}, prompt = "zzz_new" },
+        { multi = {},  prompt = ""        },
+      })
+      local result
+      tel.pick_tags(function(tags) result = tags end, {})
+      h.enter()
+      vim.wait(300, function() return h.open_count >= 2 end, 10)
+      assert.equals(2, h.open_count, "second picker should open")
+      assert.same({ "bbb", "zzz_new" }, h.get_finder_res(), "tags should be sorted alphabetically")
+      assert.same({ "zzz_new" }, h.get_toggled(), "zzz_new should be pre-selected")
+      h.enter()
+      vim.wait(200, function() return result ~= nil end, 10)
+      assert.same({ "zzz_new" }, result)
+      h.cleanup()
+    end)
+
+    it("pre-selects existing tags for refactor flow", function()
+      write_file(dir .. "/20240101T120000--n1__aaa_ccc.md", { "# N1" })
+      local h = setup_rich_mock({ prompt = "" })
+      tel.pick_tags(function() end, { pre_selected = { "aaa", "ccc" } })
+      assert.same({ "aaa", "ccc" }, h.get_toggled(), "both tags should be pre-selected")
+      h.cleanup()
+    end)
+
+    -- ─── broad multi-step scenarios ──────────────────────────────────────────
+
+    -- Helper: open multiple pickers in sequence with the rich mock.
+    -- Each entry in `interactions` is a function(h) that drives one picker step
+    -- by calling h.enter() or h.escape() and asserting intermediate state.
+    -- Returns the final callback result.
+    local function run_scenario(existing_tags, interactions)
+      for _, tag in ipairs(existing_tags) do
+        write_file(dir .. "/20240101T120000--x__" .. tag .. ".md", { "# X" })
+      end
+
+      -- Build a step list that always returns empty prompt unless overridden
+      local prompts = {}
+      local h = setup_rich_mock(vim.tbl_map(function(p) return { prompt = p } end,
+        vim.list_extend(vim.deepcopy(prompts), { "" })))
+      -- We need dynamic prompts per step, so replace get_current_line per call
+      local prompt_seq = {}
+      local prompt_call = 0
+      package.loaded["telescope.actions.state"].get_current_line = function()
+        prompt_call = prompt_call + 1
+        return prompt_seq[prompt_call] or ""
+      end
+
+      local result
+      tel.pick_tags(function(tags) result = tags end, {})
+
+      for _, interaction in ipairs(interactions) do
+        interaction(h, prompt_seq)
+        vim.wait(300, function() return result ~= nil or h.open_count > #interactions end, 10)
+      end
+      vim.wait(200, function() return result ~= nil end, 10)
+      h.cleanup()
+      return result
+    end
+
+    it("multiple space-separated new tags typed in one step", function()
+      write_file(dir .. "/20240101T120000--n1__existing.md", { "# N1" })
+      local h = setup_rich_mock({
+        { prompt = "alpha beta gamma" },
+        { prompt = ""                 },
+      })
+      local result
+      tel.pick_tags(function(tags) result = tags end, {})
+      h.enter()
+      vim.wait(300, function() return h.open_count >= 2 end, 10)
+      assert.same({ "alpha", "beta", "gamma" }, h.get_toggled(),
+        "all three typed tags should be pre-selected in second picker")
+      h.enter()
+      vim.wait(200, function() return result ~= nil end, 10)
+      table.sort(result)
+      assert.same({ "alpha", "beta", "gamma" }, result)
+      h.cleanup()
+    end)
+
+    it("typed tags appear sorted among existing tags", function()
+      write_file(dir .. "/20240101T120000--n1__mmm.md", { "# N1" })
+      local h = setup_rich_mock({
+        { prompt = "aaa zzz" },
+        { prompt = ""        },
+      })
+      local result
+      tel.pick_tags(function(tags) result = tags end, {})
+      h.enter()
+      vim.wait(300, function() return h.open_count >= 2 end, 10)
+      assert.same({ "aaa", "mmm", "zzz" }, h.get_finder_res(),
+        "second picker should show all tags in alphabetical order")
+      h.cleanup()
+      -- result not needed, just checking sort
+      package.loaded["telescope.actions.state"].get_current_line = function() return "" end
+    end)
+
+    it("ESC cancels without calling callback", function()
+      local h = setup_rich_mock({ prompt = "" })
+      local called = false
+      tel.pick_tags(function() called = true end, {})
+      h.escape()
+      vim.wait(200, function() return false end, 10)
+      assert.falsy(called, "ESC must not create/update anything")
+      h.cleanup()
+    end)
+
+    it("ESC during re-opened picker cancels entirely", function()
+      local h = setup_rich_mock({
+        { prompt = "newtag" },
+        { prompt = ""       },
+      })
+      local called = false
+      tel.pick_tags(function() called = true end, {})
+      h.enter()
+      vim.wait(300, function() return h.open_count >= 2 end, 10)
+      h.escape()
+      vim.wait(200, function() return false end, 10)
+      assert.falsy(called, "ESC in second picker must not trigger callback")
+      h.cleanup()
+    end)
+
+    it("three-step accumulation: type in step 1, type more in step 2, confirm in step 3", function()
+      local h = setup_rich_mock({
+        { prompt = "aaa" },
+        { prompt = "bbb" },
+        { prompt = ""    },
+      })
+      local result
+      tel.pick_tags(function(tags) result = tags end, {})
+
+      -- step 1: type "aaa"
+      h.enter()
+      vim.wait(300, function() return h.open_count >= 2 end, 10)
+      assert.same({ "aaa" }, h.get_toggled(), "step 2: aaa pre-selected")
+
+      -- step 2: type "bbb"
+      h.enter()
+      vim.wait(300, function() return h.open_count >= 3 end, 10)
+      assert.same({ "aaa", "bbb" }, h.get_toggled(), "step 3: both aaa and bbb pre-selected")
+
+      -- step 3: confirm
+      h.enter()
+      vim.wait(200, function() return result ~= nil end, 10)
+      table.sort(result)
+      assert.same({ "aaa", "bbb" }, result)
+      h.cleanup()
+    end)
+
+    it("pre-selected tag that user deselects is absent from final callback", function()
+      -- Simulate: type "keep remove" -> second picker pre-selects both ->
+      -- user Tab-deselects "remove" (mock: get_multi_selection only has "keep") -> confirm
+      local h = setup_rich_mock({
+        { prompt = "keep remove" },
+        { prompt = ""            },
+      })
+      -- Override get_multi_selection for the second picker to simulate user deselecting "remove"
+      local step2_multi_override = nil
+      local orig_state = package.loaded["telescope.actions.state"]
+      local orig_get_picker = orig_state.get_current_picker
+      local picker_call = 0
+      orig_state.get_current_picker = function(buf)
+        local picker = orig_get_picker(buf)
+        picker_call = picker_call + 1
+        if picker_call > 1 then
+          -- second picker's enter: user has deselected "remove"
+          picker.get_multi_selection = function(_)
+            return { { value = "keep" } }
+          end
+        end
+        return picker
+      end
+
+      local result
+      tel.pick_tags(function(tags) result = tags end, {})
+      h.enter()
+      vim.wait(300, function() return h.open_count >= 2 end, 10)
+      assert.same({ "keep", "remove" }, h.get_toggled(), "both should be pre-selected")
+      h.enter()
+      vim.wait(200, function() return result ~= nil end, 10)
+      assert.same({ "keep" }, result, "only 'keep' should be in callback")
+      h.cleanup()
+    end)
+
+    it("re-typed tag that was previously deselected is included in callback", function()
+      -- step 1: type "a b" -> picker 2 has a+b pre-selected
+      -- step 2: user deselected "a" (multi only has "b"), types "a" again -> picker 3 has a+b pre-selected
+      -- step 3: confirm -> callback(["a","b"])
+      local h = setup_rich_mock({
+        { prompt = "a b" },
+        { prompt = "a"   },
+        { prompt = ""    },
+      })
+      -- Picker 2's enter: multi only has "b" (user deselected "a")
+      local orig_state = package.loaded["telescope.actions.state"]
+      local orig_get_picker = orig_state.get_current_picker
+      local call_count = 0
+      orig_state.get_current_picker = function(buf)
+        local picker = orig_get_picker(buf)
+        call_count = call_count + 1
+        if call_count == 2 then
+          picker.get_multi_selection = function(_) return { { value = "b" } } end
+        end
+        return picker
+      end
+
+      local result
+      tel.pick_tags(function(tags) result = tags end, {})
+
+      h.enter()  -- picker 1 -> picker 2
+      vim.wait(300, function() return h.open_count >= 2 end, 10)
+      assert.same({ "a", "b" }, h.get_toggled(), "picker 2: a and b pre-selected")
+
+      h.enter()  -- picker 2 -> picker 3 (typed "a" while multi only had "b")
+      vim.wait(300, function() return h.open_count >= 3 end, 10)
+      assert.same({ "a", "b" }, h.get_toggled(), "picker 3: a and b pre-selected")
+
+      h.enter()  -- picker 3: confirm
+      vim.wait(200, function() return result ~= nil end, 10)
+      table.sort(result)
+      assert.same({ "a", "b" }, result)
+      h.cleanup()
+    end)
+
+    it("duplicate typed tag is not added twice", function()
+      local h = setup_rich_mock({
+        { prompt = "x x" },  -- typed the same tag twice in the prompt
+        { prompt = ""    },
+      })
+      local result
+      tel.pick_tags(function(tags) result = tags end, {})
+      h.enter()
+      vim.wait(300, function() return h.open_count >= 2 end, 10)
+      assert.same({ "x" }, h.get_toggled(), "x should be pre-selected exactly once")
+      h.enter()
+      vim.wait(200, function() return result ~= nil end, 10)
+      assert.same({ "x" }, result)
+      h.cleanup()
+    end)
+
+    it("slug normalisation: typed tag with spaces and hyphens is stored as underscore slug", function()
+      local h = setup_rich_mock({
+        { prompt = "my-tag" },
+        { prompt = ""       },
+      })
+      local result
+      tel.pick_tags(function(tags) result = tags end, {})
+      h.enter()
+      vim.wait(300, function() return h.open_count >= 2 end, 10)
+      -- my-tag slugifies to my_tag
+      assert.same({ "my_tag" }, h.get_toggled(), "my-tag should be stored as my_tag")
+      h.enter()
+      vim.wait(200, function() return result ~= nil end, 10)
+      assert.same({ "my_tag" }, result)
+      h.cleanup()
+    end)
+
+    it("empty Enter on first open (no selection, no typing) calls callback with empty list", function()
+      local h = setup_rich_mock({ prompt = "" })
+      local result
+      tel.pick_tags(function(tags) result = tags end, {})
+      h.enter()
+      vim.wait(200, function() return result ~= nil end, 10)
+      assert.same({}, result)
+      h.cleanup()
     end)
   end)
 end)

@@ -162,7 +162,7 @@ The timestamp makes every note unique even if you create two with the same title
 
 ## Tag Workflow
 
-When creating a note or todo, a Telescope picker appears after entering the title. Use `<Tab>` to select multiple existing tags. Type a new tag name and press `<Enter>` to create it on the fly - selected and typed tags are combined.
+When creating a note or todo, a Telescope picker appears after entering the title. Use `<Tab>` to toggle existing tags. To add new tags, type one or more space-separated names and press `<Enter>` - the picker re-opens with all previously-selected and newly-typed tags pre-selected, so you can keep selecting or deselecting. Press `<Enter>` with an empty prompt to finalize. Press `<Esc>` at any point to cancel without creating the note.
 
 `<leader>ngs` opens a search picker: selecting one or more tags filters to notes that carry all of them.
 
