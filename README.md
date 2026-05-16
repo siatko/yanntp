@@ -5,7 +5,7 @@
   ___________________
  |                   |
  | 20260514T143022-- |
- | my-note__pkm.md   |     denim.nvim
+ | my-note__pkm.md   |   denim.nvim
  |                   |
  |  # MY NOTE        |   no database.
  |                   |   no frontmatter.
