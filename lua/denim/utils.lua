@@ -2,7 +2,7 @@ local M = {}
 
 local function lower_utf8(s)
   -- Lua's string.lower() is ASCII-only; map common uppercase non-ASCII chars
-  s = s:gsub("Ä", "ä"):gsub("Ö", "ö"):gsub("Ü", "ü")
+  s = s:gsub("Ä", "ä"):gsub("Ö", "ö"):gsub("Ü", "ü"):gsub("ẞ", "ß")
   return s:lower()
 end
 

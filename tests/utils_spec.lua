@@ -40,6 +40,10 @@ describe("slugify_title", function()
   it("preserves mixed umlaut and ascii", function()
     assert.equal("käse-und-brot", utils.slugify_title("Käse und Brot"))
   end)
+
+  it("preserves eszett", function()
+    assert.equal("straße", utils.slugify_title("Straße"))
+  end)
 end)
 
 describe("slugify_tag", function()
@@ -77,6 +81,10 @@ describe("slugify_tag", function()
 
   it("preserves german umlauts", function()
     assert.equal("notiz_über_käse", utils.slugify_tag("Notiz über Käse"))
+  end)
+
+  it("preserves eszett", function()
+    assert.equal("fußball", utils.slugify_tag("Fußball"))
   end)
 end)
 
