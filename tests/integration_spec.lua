@@ -859,6 +859,132 @@ describe("integration", function()
     end)
   end)
 
+  -- ─── paste_image: file URI path ──────────────────────────────────────────────
+
+  describe("paste_image (file URI)", function()
+    local function set_clipboard(path)
+      vim.fn.setreg("+", "file://" .. path .. "\r\n")
+    end
+
+    it("copies a non-image file and inserts a plain markdown link", function()
+      local src = vim.fn.tempname() .. ".json"
+      write_file(src, { '{"key":"value"}' })
+      set_clipboard(src)
+      local note = dir .. "/20260101T000000--my-note.md"
+      write_file(note, { "before " })
+      open_buf(note)
+      vim.api.nvim_win_set_cursor(0, { 1, 6 })
+      mock_input("my doc")
+      mock_tags({})
+      notes.paste_image()
+      flush()
+      local files = vim.fn.glob(dir .. "/*.json", false, true)
+      assert.equals(1, #files, "expected one .json file in notes_dir")
+      local fname = vim.fn.fnamemodify(files[1], ":t")
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.truthy(lines[1]:find("[my doc](" .. fname .. ")", 1, true),
+        "expected plain link in buffer, got: " .. lines[1])
+      assert.falsy(lines[1]:find("![my doc]", 1, true), "should not be an image link")
+      vim.fn.delete(src)
+    end)
+
+    it("copies an image file and inserts an image markdown link", function()
+      local src = vim.fn.tempname() .. ".png"
+      write_file(src, { "" })
+      set_clipboard(src)
+      local note = dir .. "/20260101T000000--my-note.md"
+      write_file(note, { "before " })
+      open_buf(note)
+      vim.api.nvim_win_set_cursor(0, { 1, 6 })
+      mock_input("my image")
+      mock_tags({})
+      notes.paste_image()
+      flush()
+      local files = vim.fn.glob(dir .. "/*.png", false, true)
+      assert.equals(1, #files, "expected one .png file in notes_dir")
+      local fname = vim.fn.fnamemodify(files[1], ":t")
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.truthy(lines[1]:find("![my image](" .. fname .. ")", 1, true),
+        "expected image link in buffer, got: " .. lines[1])
+      vim.fn.delete(src)
+    end)
+
+    it("warns when destination file already exists", function()
+      local src = vim.fn.tempname() .. ".pdf"
+      write_file(src, { "" })
+      set_clipboard(src)
+      mock_input("my doc")
+      mock_tags({})
+      -- pre-create a file that will collide (same second)
+      local date = os.date("%Y%m%dT%H%M%S")
+      write_file(dir .. "/" .. date .. "--my-doc.pdf", { "" })
+      local warned = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
+      notes.paste_image()
+      flush()
+      vim.notify = orig_notify
+      vim.fn.delete(src)
+      assert.truthy(warned)
+    end)
+
+    it("warns and aborts when multiple files are in the clipboard", function()
+      local src1 = vim.fn.tempname() .. ".pdf"
+      local src2 = vim.fn.tempname() .. ".pdf"
+      write_file(src1, { "" })
+      write_file(src2, { "" })
+      vim.fn.setreg("+", "file://" .. src1 .. "\r\nfile://" .. src2 .. "\r\n")
+      local warned = false
+      local input_shown = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
+      vim.ui.input = function(_, _) input_shown = true end
+      notes.paste_image()
+      vim.notify = orig_notify
+      local files = vim.fn.glob(dir .. "/*.pdf", false, true)
+      assert.equals(0, #files, "expected no files copied")
+      assert.truthy(warned, "expected a warning notification")
+      assert.falsy(input_shown, "title prompt must not appear after warning")
+      vim.fn.delete(src1)
+      vim.fn.delete(src2)
+    end)
+
+    it("warns and aborts when clipboard URI points to a directory", function()
+      vim.fn.setreg("+", "file://" .. dir .. "\r\n")
+      local warned = false
+      local input_shown = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
+      vim.ui.input = function(_, _) input_shown = true end
+      notes.paste_image()
+      vim.notify = orig_notify
+      assert.truthy(warned, "expected a warning notification")
+      assert.falsy(input_shown, "title prompt must not appear")
+    end)
+
+    it("errors when clipboard file URI is not readable", function()
+      vim.fn.setreg("+", "file:///nonexistent/path/to/file.pdf\r\n")
+      local errored = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.ERROR then errored = true end end
+      notes.paste_image()
+      vim.notify = orig_notify
+      assert.truthy(errored)
+    end)
+
+    it("falls through to img-clip when clipboard has no file URI", function()
+      vim.fn.setreg("+", "not a file uri")
+      local img_clip_called = false
+      package.loaded["img-clip"] = { paste_image = function() img_clip_called = true end }
+      mock_input("my photo")
+      mock_tags({})
+      notes.paste_image()
+      flush()
+      package.loaded["img-clip"] = nil
+      assert.truthy(img_clip_called)
+    end)
+  end)
+
   -- ─── backlinks ───────────────────────────────────────────────────────────────
 
   describe("backlinks", function()

@@ -37,14 +37,14 @@
 - **URL linking** - insert URL links from clipboard with `<leader>nu`; `<CR>` and ctrl+click on URL links open the browser
 - **Backlinks** - find all notes that link to the current note
 - **Refactor** - rename and retag the current note in one step; all linking notes updated automatically
-- **Image paste** - paste clipboard images via img-clip, saved as `YYYYMMDD--name__tags.ext`
+- **File paste** - paste any file from the clipboard into your notes dir with a denim filename; image files get an image link, all other types get a plain link; raw clipboard images fall through to img-clip
 - **Notes index** - virtual buffer listing all notes grouped by date with status indicators
 - **Statistics** - note counts, todo counts, tag usage and monthly activity at a glance
 
 ## Requirements
 
 - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
-- [img-clip.nvim](https://github.com/HakonHarnes/img-clip.nvim) (optional, for image paste)
+- [img-clip.nvim](https://github.com/HakonHarnes/img-clip.nvim) (optional, for pasting raw clipboard images)
 - [which-key.nvim](https://github.com/folke/which-key.nvim) (optional, for keymap group labels)
 - `ripgrep` (for content search)
 - `find` (for file listing)
@@ -118,7 +118,7 @@ require("denim").setup({
 | `<leader>nf` | Find note by filename (multi-term) |
 | `<leader>ns` | Search note contents (multi-term live grep) |
 | `<leader>nr` | Refactor current note (rename + retag) |
-| `<leader>np` | Paste image from clipboard |
+| `<leader>np` | Paste file or image from clipboard |
 | `<leader>nl` | Insert link to another note |
 | `<leader>nu` | Insert URL link from clipboard |
 | `<leader>nb` | Show backlinks to current note |
@@ -310,7 +310,7 @@ Attendees: $
 | `:DenimInsertLink` | Insert link to another note |
 | `:DenimInsertUrlLink` | Insert URL link from clipboard |
 | `:DenimBacklinks` | Show backlinks to current note |
-| `:DenimPasteImage` | Paste image from clipboard |
+| `:DenimPasteImage` | Paste file or image from clipboard |
 | `:DenimRefactor` | Refactor current note (rename + retag) |
 | `:DenimNewTodo` | New todo |
 | `:DenimOpenTodos` | List open todos |
