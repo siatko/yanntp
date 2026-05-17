@@ -10,6 +10,11 @@ function M.setup(opts)
         require("denim.notes").new_note()
       end, { desc = "denim: new note" })
     end
+    if keymaps.capture then
+      vim.keymap.set("n", keymaps.capture, function()
+        require("denim.notes").capture()
+      end, { desc = "denim: quick capture" })
+    end
     if keymaps.new_from_template then
       vim.keymap.set("n", keymaps.new_from_template, function()
         require("denim.notes").new_note_from_template()
@@ -131,6 +136,9 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimRefactor", function()
     require("denim.notes").refactor()
   end, { desc = "Refactor current note (rename + retag)" })
+  vim.api.nvim_create_user_command("DenimCapture", function()
+    require("denim.notes").capture()
+  end, { desc = "Quick capture - title prompt then floating editor" })
   vim.api.nvim_create_user_command("DenimNew", function()
     require("denim.notes").new_note()
   end, { desc = "Create a new note in inbox" })

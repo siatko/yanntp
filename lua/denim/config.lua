@@ -3,11 +3,13 @@ local M = {}
 M.defaults = {
   notes_dir = "~/notes",
   workflow = {
-    todo = "todo",
-    done = "done",
+    todo    = "todo",
+    done    = "done",
+    capture = "quick",
   },
   keymaps = {
     new_note          = "<leader>nn",
+    capture           = "<leader>nq",
     search_notes      = "<leader>nf",
     search_content    = "<leader>ns",
     refactor          = "<leader>nr",

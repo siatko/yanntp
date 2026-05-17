@@ -147,6 +147,244 @@ describe("integration", function()
     end)
   end)
 
+  -- ─── capture ─────────────────────────────────────────────────────────────────
+
+  describe("capture", function()
+    local function find_float()
+      for _, win in ipairs(vim.api.nvim_list_wins()) do
+        if vim.api.nvim_win_get_config(win).relative ~= "" then return win end
+      end
+    end
+
+    local function close_all_floats()
+      for _, win in ipairs(vim.api.nvim_list_wins()) do
+        if vim.api.nvim_win_get_config(win).relative ~= "" then
+          pcall(vim.api.nvim_win_close, win, true)
+        end
+      end
+    end
+
+    -- normalize both sides so <C-s>/\x13 compare equal
+    local function n_callback(buf, lhs)
+      local target = vim.api.nvim_replace_termcodes(lhs, true, false, true)
+      for _, km in ipairs(vim.api.nvim_buf_get_keymap(buf, "n")) do
+        if vim.api.nvim_replace_termcodes(km.lhs, true, false, true) == target then
+          return km.callback
+        end
+      end
+    end
+
+    local function i_callback(buf, lhs)
+      local target = vim.api.nvim_replace_termcodes(lhs, true, false, true)
+      for _, km in ipairs(vim.api.nvim_buf_get_keymap(buf, "i")) do
+        if vim.api.nvim_replace_termcodes(km.lhs, true, false, true) == target then
+          return km.callback
+        end
+      end
+    end
+
+    local function save(buf)   return n_callback(buf, "<C-s>") end
+    local function cancel(buf) return n_callback(buf, "q") end
+
+    after_each(function() close_all_floats() end)
+
+    it("creates file with default capture tag in filename", function()
+      mock_input("fleeting thought")
+      notes.capture()
+      flush()
+      local win = find_float()
+      assert.truthy(win, "expected a floating window")
+      save(vim.api.nvim_win_get_buf(win))()
+      vim.wait(500, function()
+        return #vim.fn.glob(dir .. "/*--fleeting-thought__quick.md", false, true) > 0
+      end, 10)
+      assert.equal(1, #vim.fn.glob(dir .. "/*--fleeting-thought__quick.md", false, true))
+    end)
+
+    it("slugifies special characters in title", function()
+      mock_input("Hello, World!")
+      notes.capture()
+      flush()
+      local win = find_float()
+      save(vim.api.nvim_win_get_buf(win))()
+      vim.wait(500, function()
+        return #vim.fn.glob(dir .. "/*--hello-world__quick.md", false, true) > 0
+      end, 10)
+      assert.equal(1, #vim.fn.glob(dir .. "/*--hello-world__quick.md", false, true))
+    end)
+
+    it("uses custom capture tag when configured", function()
+      config.setup({ notes_dir = dir, workflow = { capture = "inbox" } })
+      mock_input("my idea")
+      notes.capture()
+      flush()
+      local win = find_float()
+      save(vim.api.nvim_win_get_buf(win))()
+      vim.wait(500, function()
+        return #vim.fn.glob(dir .. "/*--my-idea__inbox.md", false, true) > 0
+      end, 10)
+      assert.equal(1, #vim.fn.glob(dir .. "/*--my-idea__inbox.md", false, true))
+    end)
+
+    it("does nothing when title input is cancelled", function()
+      mock_input(nil)
+      notes.capture()
+      flush()
+      assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
+    end)
+
+    it("does nothing when title input is empty string", function()
+      mock_input("")
+      notes.capture()
+      flush()
+      assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
+    end)
+
+    it("float buffer has filetype markdown", function()
+      mock_input("filetype check")
+      notes.capture()
+      flush()
+      local win = find_float()
+      local buf = vim.api.nvim_win_get_buf(win)
+      assert.equal("markdown", vim.bo[buf].filetype)
+      cancel(buf)()
+    end)
+
+    it("save writes buffer content to file", function()
+      mock_input("thought with content")
+      notes.capture()
+      flush()
+      local win = find_float()
+      local buf = vim.api.nvim_win_get_buf(win)
+      vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "line one", "line two" })
+      save(buf)()
+      vim.wait(500, function()
+        return #vim.fn.glob(dir .. "/*--thought-with-content__quick.md", false, true) > 0
+      end, 10)
+      local created = vim.fn.glob(dir .. "/*--thought-with-content__quick.md", false, true)
+      assert.equal(1, #created)
+      assert.same({ "line one", "line two" }, vim.fn.readfile(created[1]))
+    end)
+
+    it("save closes the floating window", function()
+      mock_input("close on save")
+      notes.capture()
+      flush()
+      local win = find_float()
+      save(vim.api.nvim_win_get_buf(win))()
+      flush()
+      assert.falsy(vim.api.nvim_win_is_valid(win))
+    end)
+
+    it("q cancels without creating a file", function()
+      mock_input("abandoned thought")
+      notes.capture()
+      flush()
+      local win = find_float()
+      cancel(vim.api.nvim_win_get_buf(win))()
+      flush()
+      assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
+    end)
+
+    it("q closes the floating window", function()
+      mock_input("cancel close")
+      notes.capture()
+      flush()
+      local win = find_float()
+      local buf = vim.api.nvim_win_get_buf(win)
+      cancel(buf)()
+      flush()
+      assert.falsy(vim.api.nvim_win_is_valid(win))
+    end)
+
+    it("Esc cancels without creating a file", function()
+      mock_input("escaped thought")
+      notes.capture()
+      flush()
+      local win = find_float()
+      local buf = vim.api.nvim_win_get_buf(win)
+      n_callback(buf, "<Esc>")()
+      flush()
+      assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
+    end)
+
+    it("has C-s in both normal and insert mode, q and Esc in normal mode", function()
+      mock_input("keymap check")
+      notes.capture()
+      flush()
+      local win = find_float()
+      local buf = vim.api.nvim_win_get_buf(win)
+      assert.truthy(n_callback(buf, "<C-s>"), "<C-s> not in normal mode keymaps")
+      assert.truthy(i_callback(buf, "<C-s>"), "<C-s> not in insert mode keymaps")
+      assert.truthy(n_callback(buf, "q"),     "q not in normal mode keymaps")
+      assert.truthy(n_callback(buf, "<Esc>"), "<Esc> not in normal mode keymaps")
+      cancel(buf)()
+    end)
+
+    it("starts empty when no capture template exists", function()
+      mock_input("empty start")
+      notes.capture()
+      flush()
+      local win = find_float()
+      local buf = vim.api.nvim_win_get_buf(win)
+      local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+      assert.equal("", table.concat(lines, ""))
+      cancel(buf)()
+    end)
+
+    it("pre-fills float with template when matching template exists", function()
+      make_template("quick", { "# Quick Note", "", "- " })
+      mock_input("templated capture")
+      notes.capture()
+      flush()
+      local win = find_float()
+      local buf = vim.api.nvim_win_get_buf(win)
+      assert.same({ "# Quick Note", "", "- " }, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+      cancel(buf)()
+    end)
+
+    it("uses custom capture tag for template lookup", function()
+      config.setup({ notes_dir = dir, workflow = { capture = "inbox" } })
+      make_template("inbox", { "inbox line" })
+      mock_input("custom template")
+      notes.capture()
+      flush()
+      local win = find_float()
+      local buf = vim.api.nvim_win_get_buf(win)
+      assert.same({ "inbox line" }, vim.api.nvim_buf_get_lines(buf, 0, -1, false))
+      cancel(buf)()
+    end)
+
+    it("does not pre-fill when no template matches the capture tag", function()
+      make_template("other", { "wrong template" })
+      mock_input("no template match")
+      notes.capture()
+      flush()
+      local win = find_float()
+      local buf = vim.api.nvim_win_get_buf(win)
+      assert.equal("", table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), ""))
+      cancel(buf)()
+    end)
+
+    it("template tab stops land cursor at first stop and set Tab keymap", function()
+      make_template("quick", { "Topic: $", "Notes: $" })
+      mock_input("tabstop capture")
+      notes.capture()
+      flush()
+      local win = find_float()
+      local buf = vim.api.nvim_win_get_buf(win)
+      local cursor = vim.api.nvim_win_get_cursor(win)
+      assert.equal(1, cursor[1])
+      assert.equal(7, cursor[2])
+      local has_tab = false
+      for _, km in ipairs(vim.api.nvim_buf_get_keymap(buf, "i")) do
+        if km.lhs == "<Tab>" then has_tab = true; break end
+      end
+      assert.truthy(has_tab)
+      cancel(buf)()
+    end)
+  end)
+
   -- ─── cycle_workflow ──────────────────────────────────────────────────────────
 
   describe("cycle_workflow", function()
