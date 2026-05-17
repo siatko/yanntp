@@ -383,6 +383,18 @@ describe("integration", function()
       assert.truthy(has_tab)
       cancel(buf)()
     end)
+
+    it("template first $ is removed from buffer content when float opens", function()
+      make_template("quick", { "Topic: $", "Notes" })
+      mock_input("dollar removed")
+      notes.capture()
+      flush()
+      local win = find_float()
+      local buf = vim.api.nvim_win_get_buf(win)
+      local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+      assert.equal("Topic: ", lines[1])
+      cancel(buf)()
+    end)
   end)
 
   -- ─── cycle_workflow ──────────────────────────────────────────────────────────
