@@ -371,6 +371,90 @@ function M.insert_url_link()
   end)
 end
 
+function M.capture()
+  local opts = get_opts()
+  vim.fn.mkdir(opts.notes_dir, "p")
+
+  vim.ui.input({ prompt = "Capture: " }, function(name)
+    if not name or name == "" then return end
+    vim.schedule(function()
+      local date        = os.date("%Y%m%dT%H%M%S")
+      local slug        = slugify_title(name)
+      local capture_tag = slugify_tag(opts.workflow.capture)
+      local filename    = date .. "--" .. slug .. "__" .. capture_tag .. ".md"
+      local filepath    = opts.notes_dir .. "/" .. filename
+
+      local tmpl_path  = opts.notes_dir .. "/.templates/" .. capture_tag .. ".md"
+      local tmpl_lines = vim.fn.filereadable(tmpl_path) == 1 and vim.fn.readfile(tmpl_path) or {}
+
+      local buf = vim.api.nvim_create_buf(false, true)
+      vim.bo[buf].buftype  = "nofile"
+      vim.bo[buf].filetype = "markdown"
+
+      if #tmpl_lines > 0 then
+        vim.api.nvim_buf_set_lines(buf, 0, -1, false, tmpl_lines)
+      end
+
+      local width  = math.floor(vim.o.columns * 0.7)
+      local height = math.floor(vim.o.lines * 0.4)
+      local row    = math.floor((vim.o.lines - height) / 2)
+      local col    = math.floor((vim.o.columns - width) / 2)
+
+      local win = vim.api.nvim_open_win(buf, true, {
+        relative   = "editor",
+        width      = width,
+        height     = height,
+        row        = row,
+        col        = col,
+        style      = "minimal",
+        border     = "rounded",
+        title      = " " .. filename .. " ",
+        title_pos  = "center",
+        footer     = "  <C-s> save  Esc/q cancel  ",
+        footer_pos = "center",
+      })
+
+      local done = false
+
+      local function close(write)
+        if done then return end
+        done = true
+        if write then
+          local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+          vim.fn.writefile(lines, filepath)
+        end
+        vim.api.nvim_win_close(win, true)
+        pcall(vim.api.nvim_buf_delete, buf, { force = true })
+        if write then
+          vim.notify("denim: captured — " .. filename, vim.log.levels.INFO)
+        end
+      end
+
+      vim.keymap.set({ "i", "n" }, "<C-s>", function() close(true) end,  { buffer = buf, nowait = true })
+      vim.keymap.set("n",          "q",     function() close(false) end, { buffer = buf, nowait = true })
+      vim.keymap.set("n",          "<Esc>", function() close(false) end, { buffer = buf, nowait = true })
+
+      vim.api.nvim_create_autocmd("WinClosed", {
+        pattern  = tostring(win),
+        once     = true,
+        callback = function()
+          if not done then
+            done = true
+            pcall(vim.api.nvim_buf_delete, buf, { force = true })
+          end
+        end,
+      })
+
+      if #tmpl_lines > 0 then
+        activate_tab_stops(buf)
+      else
+        vim.api.nvim_win_set_cursor(win, { 1, 0 })
+        vim.cmd("startinsert")
+      end
+    end)
+  end)
+end
+
 function M.ensure_notes_dir()
   vim.fn.mkdir(get_opts().notes_dir, "p")
 end

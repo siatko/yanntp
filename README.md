@@ -25,6 +25,7 @@
 
 ## Features
 
+- **Quick capture** - title prompt + floating markdown editor from anywhere; stays in your current buffer; auto-tagged with a configurable tag (default `quick`); uses a matching template if one exists
 - **Flat structure** - all notes, todos and attachments live in one directory
 - **Denote-style filenames** - `YYYYMMDDTHHMMSS--title__tag1_tag2.md`
 - **Todo tracking** - todo/done status as regular tags (`__todo`, `__done`); configurable tag names; cycle any note through none/todo/done with one key; find by tag search
@@ -78,16 +79,19 @@ All keys are optional - only set what you want to override:
 require("denim").setup({
   notes_dir = "~/notes",
 
-  -- Tag names used for todo status. Change to match your preferred workflow,
-  -- e.g. { todo = "next", done = "completed" } to follow GTD conventions.
+  -- Tag names used for workflow states. All are configurable.
+  -- capture: automatically applied to quick captures; a template named
+  --   <capture>.md in .templates/ is used as the initial content if it exists.
   workflow = {
-    todo = "todo",
-    done = "done",
+    todo    = "todo",
+    done    = "done",
+    capture = "quick",
   },
 
   keymaps = {
     -- basic
     new_note          = "<leader>nn",
+    capture           = "<leader>nq",
     search_notes      = "<leader>nf",
     search_content    = "<leader>ns",
     refactor          = "<leader>nr",
@@ -117,6 +121,7 @@ require("denim").setup({
 | Key | Action |
 |---|---|
 | `<leader>nn` | New note |
+| `<leader>nq` | Quick capture |
 | `<leader>nf` | Find note by filename (multi-term) |
 | `<leader>ns` | Search note contents (multi-term live grep) |
 | `<leader>nr` | Refactor current note (rename + retag) |
@@ -250,6 +255,22 @@ Attendees: $
 
 `<leader>ngr` opens a single-select tag picker. After selecting a tag, enter a new name and every file carrying that tag is renamed and every backlink pointing to any of those files is rewritten. A notification reports how many files were renamed and how many link references were updated.
 
+## Quick Capture
+
+`<leader>nq` (or `:DenimCapture`) lets you jot down a note without leaving your current buffer. A title prompt appears, then a floating markdown editor opens centered on screen:
+
+```
+╭─────────── 20260517T120000--my-thought__quick.md ───────────╮
+│                                                              │
+│                                                              │
+│                                                              │
+╰────────────── <C-s> save  Esc/q cancel ─────────────────────╯
+```
+
+Press `<C-s>` (insert or normal mode) to save and close. Press `Esc` or `q` in normal mode to cancel - no file is created. The note is auto-tagged with `workflow.capture` (default `quick`).
+
+If a template named `<capture>.md` exists in `notes_dir/.templates/` (e.g. `quick.md`), it is used as the initial content of the float. Tab stops (`$`) work the same as in template-based note creation.
+
 ## Notes Index
 
 `<leader>nvi` (or `:DenimIndex`) opens a virtual buffer listing all notes grouped by date, newest first:
@@ -310,6 +331,7 @@ Attendees: $
 
 | Command | Action |
 |---|---|
+| `:DenimCapture` | Quick capture |
 | `:DenimNew` | New note |
 | `:DenimNewFromTemplate` | New note from template |
 | `:DenimNewTemplate` | Create a new template |
