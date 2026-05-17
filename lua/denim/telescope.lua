@@ -60,6 +60,9 @@ end
 
 
 local function all_note_files(notes_dir)
+  if vim.fn.executable("fd") == 1 then
+    return vim.fn.systemlist({ "fd", "--type", "f", "--extension", "md", "--max-depth", "1", ".", notes_dir })
+  end
   return vim.fn.systemlist({ "find", notes_dir, "-maxdepth", "1", "-name", "*.md" })
 end
 
@@ -245,7 +248,8 @@ function M.backlinks()
   for _, filepath in ipairs(all_note_files(notes_dir)) do
     if filepath ~= current_file then
       for _, line in ipairs(vim.fn.readfile(filepath)) do
-        if line:find(filename, 1, true) then
+        local stripped = line:gsub("!%[[^%]]*%]%([^%)]*%)", "")
+        if stripped:find("](" .. filename, 1, true) then
           table.insert(results, filepath)
           break
         end

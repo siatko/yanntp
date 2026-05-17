@@ -27,9 +27,8 @@ local function gather_notes(notes_dir)
         status = "done_todo"
       end
 
-      local file_lines = vim.fn.readfile(filepath, "", 1)
-      local title = (file_lines and file_lines[1] and file_lines[1]:match("^#%s+(.+)$"))
-        or vim.fn.fnamemodify(filepath, ":t:r")
+      local slug  = filename:match("%-%-(.-)__") or filename:match("%-%-(.-)%.md$")
+      local title = slug and slug:gsub("-", " ") or vim.fn.fnamemodify(filepath, ":t:r")
 
       table.insert(notes, {
         filepath = filepath,

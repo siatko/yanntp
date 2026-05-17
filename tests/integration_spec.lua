@@ -996,6 +996,34 @@ describe("integration", function()
       for _, m in ipairs(mods) do package.loaded[m] = saved[m] end
       assert.truthy(opened, "picker should open when backlinks exist")
     end)
+
+    it("does not count plain text mentions as backlinks", function()
+      local target = dir .. "/20260514--target.md"
+      local mentioner = dir .. "/20260514--mentioner.md"
+      write_file(target, { "# TARGET", "" })
+      write_file(mentioner, { "# MENTIONER", "", "see 20260514--target.md for context" })
+      open_buf(target)
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("no backlinks") then notified = true end end
+      tel.backlinks()
+      vim.notify = orig_notify
+      assert.truthy(notified)
+    end)
+
+    it("does not count image links as backlinks", function()
+      local target = dir .. "/20260514--target.md"
+      local linker = dir .. "/20260514--linker.md"
+      write_file(target, { "# TARGET", "" })
+      write_file(linker, { "# LINKER", "", "![alt](20260514--target.md)" })
+      open_buf(target)
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("no backlinks") then notified = true end end
+      tel.backlinks()
+      vim.notify = orig_notify
+      assert.truthy(notified)
+    end)
   end)
 
   -- ─── search_tags ─────────────────────────────────────────────────────────────
@@ -1472,7 +1500,7 @@ describe("integration", function()
       local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
       assert.truthy(vim.tbl_contains(lines, "# Notes Index"))
       assert.truthy(vim.tbl_contains(lines, "## 2026-05-14"))
-      assert.truthy(vim.tbl_contains(lines, "- [MY NOTE](20260514--my-note.md)"))
+      assert.truthy(vim.tbl_contains(lines, "- [my note](20260514--my-note.md)"))
     end)
 
     it("shows a placeholder when no notes exist", function()
@@ -1485,14 +1513,14 @@ describe("integration", function()
       write_file(dir .. "/20260514--fix-bug__todo.md", { "# FIX BUG", "" })
       idx.open()
       local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      assert.truthy(vim.tbl_contains(lines, "- [ ] [FIX BUG](20260514--fix-bug__todo.md)"))
+      assert.truthy(vim.tbl_contains(lines, "- [ ] [fix bug](20260514--fix-bug__todo.md)"))
     end)
 
     it("shows done todos with checked checkbox", function()
       write_file(dir .. "/20260514--done-task__done.md", { "# DONE TASK", "" })
       idx.open()
       local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      assert.truthy(vim.tbl_contains(lines, "- [x] [DONE TASK](20260514--done-task__done.md)"))
+      assert.truthy(vim.tbl_contains(lines, "- [x] [done task](20260514--done-task__done.md)"))
     end)
 
     it("reuses the same buffer on repeated open calls", function()
@@ -1533,11 +1561,11 @@ describe("integration", function()
     it("r refreshes the buffer with newly added notes", function()
       idx.open()
       local before = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      assert.falsy(vim.tbl_contains(before, "- [FRESH NOTE](20260514--fresh-note.md)"))
+      assert.falsy(vim.tbl_contains(before, "- [fresh note](20260514--fresh-note.md)"))
       write_file(dir .. "/20260514--fresh-note.md", { "# FRESH NOTE", "" })
       idx.open()
       local after = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      assert.truthy(vim.tbl_contains(after, "- [FRESH NOTE](20260514--fresh-note.md)"))
+      assert.truthy(vim.tbl_contains(after, "- [fresh note](20260514--fresh-note.md)"))
     end)
 
     it("q closes the index buffer", function()
@@ -1547,11 +1575,18 @@ describe("integration", function()
       assert.falsy(vim.api.nvim_buf_is_loaded(bufnr))
     end)
 
-    it("falls back to filename stem when note has no H1 heading", function()
-      write_file(dir .. "/20260514--no-heading.md", { "just some content", "" })
+    it("derives title from filename slug", function()
+      write_file(dir .. "/20260514--my-idea.md", { "# SOME H1", "" })
       idx.open()
       local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      assert.truthy(vim.tbl_contains(lines, "- [20260514--no-heading](20260514--no-heading.md)"))
+      assert.truthy(vim.tbl_contains(lines, "- [my idea](20260514--my-idea.md)"))
+    end)
+
+    it("derives title from slug when note has multiple tags", function()
+      write_file(dir .. "/20260514--project-plan__pkm_work.md", { "" })
+      idx.open()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.truthy(vim.tbl_contains(lines, "- [project plan](20260514--project-plan__pkm_work.md)"))
     end)
   end)
 
