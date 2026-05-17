@@ -373,6 +373,10 @@ function M.paste_image()
     return
   end
   if src then
+    if vim.fn.isdirectory(src) == 1 then
+      vim.notify("denim: pasting folders is not supported", vim.log.levels.WARN)
+      return
+    end
     if vim.fn.filereadable(src) == 0 then
       vim.notify("denim: file not readable: " .. src, vim.log.levels.ERROR)
       return

@@ -949,6 +949,19 @@ describe("integration", function()
       vim.fn.delete(src2)
     end)
 
+    it("warns and aborts when clipboard URI points to a directory", function()
+      vim.fn.setreg("+", "file://" .. dir .. "\r\n")
+      local warned = false
+      local input_shown = false
+      local orig_notify = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
+      vim.ui.input = function(_, _) input_shown = true end
+      notes.paste_image()
+      vim.notify = orig_notify
+      assert.truthy(warned, "expected a warning notification")
+      assert.falsy(input_shown, "title prompt must not appear")
+    end)
+
     it("errors when clipboard file URI is not readable", function()
       vim.fn.setreg("+", "file:///nonexistent/path/to/file.pdf\r\n")
       local errored = false
