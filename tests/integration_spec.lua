@@ -1052,13 +1052,16 @@ describe("integration", function()
   -- ─── search_notes / search_content / list_open_todos / list_done_todos ───────
 
   describe("search_notes", function()
-    local saved_builtin
+    local saved_builtin, saved_sorters
     before_each(function()
       saved_builtin = package.loaded["telescope.builtin"]
+      saved_sorters = package.loaded["telescope.sorters"]
       package.loaded["telescope.builtin"] = { find_files = function() end, live_grep = function() end }
+      package.loaded["telescope.sorters"] = { new = function() return {} end }
     end)
     after_each(function()
       package.loaded["telescope.builtin"] = saved_builtin
+      package.loaded["telescope.sorters"] = saved_sorters
     end)
 
     it("opens a file picker in the notes directory excluding templates", function()
@@ -1074,13 +1077,16 @@ describe("integration", function()
   end)
 
   describe("search_content", function()
-    local saved_builtin
+    local saved_builtin, saved_sorters
     before_each(function()
       saved_builtin = package.loaded["telescope.builtin"]
+      saved_sorters = package.loaded["telescope.sorters"]
       package.loaded["telescope.builtin"] = { find_files = function() end, live_grep = function() end }
+      package.loaded["telescope.sorters"] = { new = function() return {} end }
     end)
     after_each(function()
       package.loaded["telescope.builtin"] = saved_builtin
+      package.loaded["telescope.sorters"] = saved_sorters
     end)
 
     it("opens live grep in the notes directory excluding templates", function()
