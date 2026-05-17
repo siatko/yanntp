@@ -79,6 +79,14 @@ function M.resolve_slug(name, current_title, current_slug)
   return M.slugify_title(name)
 end
 
+function M.multiterm_match(prompt, line)
+  if prompt == "" then return true end
+  for _, term in ipairs(vim.split(prompt, "%s+", { trimempty = true })) do
+    if not line:find(term, 1, true) then return false end
+  end
+  return true
+end
+
 function M.find_link_path(line, col)
   local nearest_path, nearest_dist = nil, math.huge
   local pos = 1

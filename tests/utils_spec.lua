@@ -216,6 +216,136 @@ describe("resolve_slug", function()
   end)
 end)
 
+describe("multiterm_match", function()
+  -- empty prompt
+  it("matches everything when prompt is empty", function()
+    assert.is_true(utils.multiterm_match("", "20260101--some-note__rust.md"))
+  end)
+
+  it("matches everything when prompt is only spaces", function()
+    assert.is_true(utils.multiterm_match("   ", "20260101--some-note__rust.md"))
+  end)
+
+  -- single term
+  it("matches when single term is present", function()
+    assert.is_true(utils.multiterm_match("rust", "20260101--some-note__rust.md"))
+  end)
+
+  it("does not match when single term is absent", function()
+    assert.is_false(utils.multiterm_match("python", "20260101--some-note__rust.md"))
+  end)
+
+  -- Denote filename conventions
+  it("matches tag by _tag prefix", function()
+    assert.is_true(utils.multiterm_match("_rust", "20260101--some-note__rust_journal.md"))
+  end)
+
+  it("does not match absent tag by _tag prefix", function()
+    assert.is_false(utils.multiterm_match("_python", "20260101--some-note__rust_journal.md"))
+  end)
+
+  it("matches slug by -- prefix", function()
+    assert.is_true(utils.multiterm_match("--some-note", "20260101--some-note__rust.md"))
+  end)
+
+  it("does not match absent slug by -- prefix", function()
+    assert.is_false(utils.multiterm_match("--other-note", "20260101--some-note__rust.md"))
+  end)
+
+  -- multi-term AND
+  it("matches when all terms are present", function()
+    assert.is_true(utils.multiterm_match("rust journal", "20260101--my-journal__rust_journal.md"))
+  end)
+
+  it("does not match when first term is absent", function()
+    assert.is_false(utils.multiterm_match("python journal", "20260101--my-journal__rust_journal.md"))
+  end)
+
+  it("does not match when second term is absent", function()
+    assert.is_false(utils.multiterm_match("rust python", "20260101--my-journal__rust_journal.md"))
+  end)
+
+  it("does not match when all terms are absent", function()
+    assert.is_false(utils.multiterm_match("python elixir", "20260101--my-journal__rust_journal.md"))
+  end)
+
+  -- orderless: terms in any order
+  it("matches terms regardless of order in prompt", function()
+    local filename = "20260101--my-journal__rust_journal.md"
+    assert.is_true(utils.multiterm_match("rust journal", filename))
+    assert.is_true(utils.multiterm_match("journal rust", filename))
+  end)
+
+  -- three terms
+  it("matches when three terms are all present", function()
+    assert.is_true(utils.multiterm_match("_rust _journal 2026", "20260101--my-journal__rust_journal.md"))
+  end)
+
+  it("does not match when one of three terms is absent", function()
+    assert.is_false(utils.multiterm_match("_rust _journal 2025", "20260101--my-journal__rust_journal.md"))
+  end)
+
+  -- mixing tag and slug search
+  it("matches mixed tag and slug terms", function()
+    assert.is_true(utils.multiterm_match("_rust --my-journal", "20260101--my-journal__rust.md"))
+  end)
+
+  it("does not match when tag term present but slug term absent", function()
+    assert.is_false(utils.multiterm_match("_rust --other", "20260101--my-journal__rust.md"))
+  end)
+
+  -- plain matching: special pattern chars treated as literals
+  it("treats dots as literal characters", function()
+    assert.is_true(utils.multiterm_match(".md", "20260101--note__rust.md"))
+  end)
+
+  it("treats hyphens as literal characters", function()
+    assert.is_true(utils.multiterm_match("my-journal", "20260101--my-journal__rust.md"))
+  end)
+
+  -- whitespace handling
+  it("handles multiple spaces between terms", function()
+    assert.is_true(utils.multiterm_match("rust   journal", "20260101--my-journal__rust_journal.md"))
+  end)
+
+  it("handles leading and trailing spaces", function()
+    assert.is_true(utils.multiterm_match("  rust  ", "20260101--my-journal__rust_journal.md"))
+  end)
+
+  -- todo filenames
+  it("matches open todo filenames", function()
+    assert.is_true(utils.multiterm_match("_backend -O-", "20260101-O-fix-bug__backend.md"))
+  end)
+
+  it("matches done todo filenames", function()
+    assert.is_true(utils.multiterm_match("_backend -X-", "20260101-X-fix-bug__backend.md"))
+  end)
+
+  -- timestamp matching
+  it("matches by year", function()
+    assert.is_true(utils.multiterm_match("2026 _rust", "20260101--note__rust.md"))
+  end)
+
+  it("does not match wrong year", function()
+    assert.is_false(utils.multiterm_match("2025 _rust", "20260101--note__rust.md"))
+  end)
+
+  -- case sensitivity
+  it("is case-sensitive", function()
+    assert.is_false(utils.multiterm_match("Rust", "20260101--note__rust.md"))
+    assert.is_true(utils.multiterm_match("rust", "20260101--note__rust.md"))
+  end)
+
+  -- no false positives on partial tag names
+  it("_rust matches _rusty (substring - expected behaviour)", function()
+    assert.is_true(utils.multiterm_match("_rust", "20260101--note__rusty.md"))
+  end)
+
+  it("_rusty does not match _rust only file", function()
+    assert.is_false(utils.multiterm_match("_rusty", "20260101--note__rust.md"))
+  end)
+end)
+
 describe("find_link_path", function()
   local line = "see [Alpha](alpha.md) and [Beta](beta.md) for details"
 

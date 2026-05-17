@@ -22,6 +22,14 @@ local function find_cmd()
   return { "find", ".", "-name", "*.md", "-not", "-path", "*/.templates/*" }
 end
 
+local function multiterm_sorter()
+  return require("telescope.sorters").new({
+    scoring_function = function(_, prompt, line)
+      return utils.multiterm_match(prompt, line) and 1 or -1
+    end,
+  })
+end
+
 function M.search_notes()
   local t = get_telescope()
   if not t then return end
@@ -30,6 +38,7 @@ function M.search_notes()
     prompt_title = "Notes",
     cwd = get_opts().notes_dir,
     find_command = find_cmd(),
+    sorter = multiterm_sorter(),
   })
 end
 
@@ -41,6 +50,11 @@ function M.search_content()
     prompt_title = "Notes Content",
     cwd = get_opts().notes_dir,
     additional_args = { "--glob", "*.md", "--glob", "!.templates/**" },
+    on_input_filter_cb = function(prompt)
+      local terms = vim.split(prompt, "%s+", { trimempty = true })
+      return { prompt = terms[1] or "" }
+    end,
+    sorter = multiterm_sorter(),
   })
 end
 

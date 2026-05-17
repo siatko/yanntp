@@ -115,8 +115,8 @@ require("denim").setup({
 | Key | Action |
 |---|---|
 | `<leader>nn` | New note |
-| `<leader>nf` | Find note by filename |
-| `<leader>ns` | Search note contents (live grep) |
+| `<leader>nf` | Find note by filename (multi-term) |
+| `<leader>ns` | Search note contents (multi-term live grep) |
 | `<leader>nr` | Refactor current note (rename + retag) |
 | `<leader>np` | Paste image from clipboard |
 | `<leader>nl` | Insert link to another note |
@@ -171,6 +171,22 @@ The timestamp makes every note unique even if you create two with the same title
 ```
 20260514T143022--architecture-diagram__pkm.png
 ```
+
+## Searching
+
+Both `<leader>nf` (filename) and `<leader>ns` (content) support **multi-term AND search**: separate terms with spaces and every term must match, in any order.
+
+Because the filename is the metadata, the Denote naming convention doubles as a natural search syntax:
+
+| Prefix | Matches | Example |
+|---|---|---|
+| `_` | tag | `_rust` - notes tagged rust |
+| `--` | title/slug | `--meeting` - notes with "meeting" in the title |
+| none | anywhere | `2026` - matches timestamp, title, or tags |
+
+Combine freely - `_rust --project 2026` finds notes from 2026 with tag rust and "project" in the title. Order does not matter.
+
+`<leader>nf` shows all notes immediately and filters as you type. `<leader>ns` requires at least one character before ripgrep runs - that is normal live-grep behaviour.
 
 ## Linking Philosophy
 
