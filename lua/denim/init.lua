@@ -75,15 +75,10 @@ function M.setup(opts)
         require("denim.notes").refactor()
       end, { desc = "denim: refactor current note" })
     end
-    if keymaps.mark_todo then
-      vim.keymap.set("n", keymaps.mark_todo, function()
-        require("denim.notes").mark_todo()
-      end, { desc = "denim: mark current note as todo" })
-    end
-    if keymaps.mark_done then
-      vim.keymap.set("n", keymaps.mark_done, function()
-        require("denim.notes").mark_done()
-      end, { desc = "denim: mark current note as done" })
+    if keymaps.cycle_workflow then
+      vim.keymap.set("n", keymaps.cycle_workflow, function()
+        require("denim.notes").cycle_workflow()
+      end, { desc = "denim: cycle workflow state (none → todo → done → none)" })
     end
     if keymaps.open_index then
       vim.keymap.set("n", keymaps.open_index, function()
@@ -103,7 +98,6 @@ function M.setup(opts)
       { "<leader>n",  group = "notes" },
       { "<leader>nt", group = "templates" },
       { "<leader>ng", group = "tags" },
-      { "<leader>nx", group = "todos" },
       { "<leader>nv", group = "views" },
     })
   end
@@ -167,12 +161,9 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimPasteImage", function()
     require("denim.notes").paste_image()
   end, { desc = "Paste image from clipboard" })
-  vim.api.nvim_create_user_command("DenimMarkTodo", function()
-    require("denim.notes").mark_todo()
-  end, { desc = "Mark current note as todo" })
-  vim.api.nvim_create_user_command("DenimMarkDone", function()
-    require("denim.notes").mark_done()
-  end, { desc = "Mark current note as done" })
+  vim.api.nvim_create_user_command("DenimCycle", function()
+    require("denim.notes").cycle_workflow()
+  end, { desc = "Cycle workflow state: none → todo → done → none" })
   vim.api.nvim_create_user_command("DenimIndex", function()
     require("denim.index").open()
   end, { desc = "Open notes index" })

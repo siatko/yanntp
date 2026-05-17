@@ -72,6 +72,27 @@ function M.rename_tag_in_filename(filename, old_tag, new_tag)
   return base .. suffix .. ".md", true
 end
 
+function M.remove_tag_from_filename(filename, tag)
+  local base     = filename:match("^(.-)__[^%.]+%.md$")
+  local tag_part = filename:match("__([^%.]+)%.md$")
+  if not tag_part then return filename, false end
+
+  local tags, seen = {}, {}
+  local found = false
+  for t in tag_part:gmatch("[^_]+") do
+    if t == tag then
+      found = true
+    elseif t ~= "" and not seen[t] then
+      seen[t] = true
+      table.insert(tags, t)
+    end
+  end
+
+  if not found then return filename, false end
+  local suffix = #tags > 0 and ("__" .. table.concat(tags, "_")) or ""
+  return base .. suffix .. ".md", true
+end
+
 function M.add_tag_to_filename(filename, tag)
   local base = filename:match("^(.-)__[^%.]+%.md$") or filename:match("^(.-)%.md$")
   if not base then return filename, false end
