@@ -440,10 +440,11 @@ end
 function M.search_templates()
   local notes_dir = get_opts().notes_dir
   local tmpls     = template_files(notes_dir)
+  local tmpl_dir  = notes_dir .. "/.templates"
 
   if #tmpls == 0 then
     vim.notify(
-      "denim: no templates found; add .md files to " .. notes_dir .. "/.templates",
+      "denim: no templates found; add .md files to " .. tmpl_dir,
       vim.log.levels.INFO
     )
     return
@@ -452,10 +453,14 @@ function M.search_templates()
   local t = get_telescope()
   if not t then return end
 
+  local cmd = vim.fn.executable("fd") == 1
+    and { "fd", "--type", "f", "--extension", "md", "--max-depth", "1" }
+    or  { "find", ".", "-maxdepth", "1", "-name", "*.md" }
+
   t.find_files({
     prompt_title = "Templates",
-    cwd          = notes_dir .. "/.templates",
-    find_command = { "find", notes_dir .. "/.templates", "-maxdepth", "1", "-name", "*.md" },
+    cwd          = tmpl_dir,
+    find_command = cmd,
   })
 end
 

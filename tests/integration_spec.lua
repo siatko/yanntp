@@ -395,6 +395,21 @@ describe("integration", function()
       assert.equal("Topic: ", lines[1])
       cancel(buf)()
     end)
+
+    it("cursor lands after prefix when $ is the last character on the line (e.g. ~$)", function()
+      make_template("quick", { "~$" })
+      mock_input("eol stop")
+      notes.capture()
+      flush()
+      local win = find_float()
+      local buf = vim.api.nvim_win_get_buf(win)
+      local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+      assert.equal("~", lines[1])
+      local cursor = vim.api.nvim_win_get_cursor(win)
+      assert.equal(1, cursor[1])
+      assert.equal(1, cursor[2])
+      cancel(buf)()
+    end)
   end)
 
   -- ─── cycle_workflow ──────────────────────────────────────────────────────────
@@ -1694,11 +1709,38 @@ describe("integration", function()
       end
       assert.falsy(has_tab)
     end)
+
+    it("cursor lands after prefix when $ is the last character on the line (e.g. ~$)", function()
+      local tmpl = make_template("eol-stop", { "~$" })
+      mock_template(tmpl)
+      mock_input("eol stop")
+      mock_tags({})
+      notes.new_note_from_template()
+      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--eol-stop.md"
+      wait_for(expected)
+      flush()
+      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+      assert.equal("~", lines[1])
+      local cursor = vim.api.nvim_win_get_cursor(0)
+      assert.equal(1, cursor[1])
+      assert.equal(1, cursor[2])
+    end)
   end)
 
   -- ─── search_templates ─────────────────────────────────────────────────────────
 
   describe("search_templates", function()
+    local saved_builtin
+
+    before_each(function()
+      saved_builtin = package.loaded["telescope.builtin"]
+      package.loaded["telescope.builtin"] = { find_files = function() end, live_grep = function() end }
+    end)
+
+    after_each(function()
+      package.loaded["telescope.builtin"] = saved_builtin
+    end)
+
     it("notifies when no templates exist", function()
       local notified = false
       local orig_notify = vim.notify
@@ -1706,6 +1748,27 @@ describe("integration", function()
       tel.search_templates()
       vim.notify = orig_notify
       assert.truthy(notified)
+    end)
+
+    it("opens a file picker scoped to the templates directory", function()
+      make_template("quick", { "content" })
+      local called_with
+      package.loaded["telescope.builtin"].find_files = function(opts) called_with = opts end
+      tel.search_templates()
+      assert.truthy(called_with, "find_files should be called")
+      assert.equal("Templates", called_with.prompt_title)
+      assert.equal(dir .. "/.templates", called_with.cwd)
+    end)
+
+    it("find_command uses relative paths so Telescope can display results", function()
+      make_template("quick", { "content" })
+      local called_with
+      package.loaded["telescope.builtin"].find_files = function(opts) called_with = opts end
+      tel.search_templates()
+      assert.truthy(called_with)
+      local cmd = table.concat(called_with.find_command, " ")
+      -- must not contain an absolute path - that causes Telescope to show empty results
+      assert.falsy(cmd:find(dir, 1, true), "find_command must not embed the absolute notes_dir path")
     end)
   end)
 

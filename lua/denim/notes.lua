@@ -59,8 +59,16 @@ end
 local function activate_tab_stops(bufnr)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local has_stop = false
+  local stop_at_eol = false
   for _, line in ipairs(lines) do
-    if line:find("%$") then has_stop = true; break end
+    local col = line:find("%$")
+    if col then
+      has_stop = true
+      -- col is 1-indexed; after removal the line is 1 char shorter
+      -- if the 0-indexed target column >= remaining length, $ was at EOL
+      stop_at_eol = (col - 1) >= (#line - 1)
+      break
+    end
   end
 
   if not has_stop then
@@ -70,7 +78,9 @@ local function activate_tab_stops(bufnr)
   end
 
   find_and_remove_stop(bufnr)
-  vim.cmd("startinsert")
+  -- startinsert! (append) when $ was at EOL: normal-mode cursor gets clamped
+  -- one position short, so we need append to land after the last character
+  vim.cmd(stop_at_eol and "startinsert!" or "startinsert")
   vim.keymap.set("i", "<Tab>", function()
     if not find_and_remove_stop(bufnr) then
       vim.keymap.del("i", "<Tab>", { buffer = bufnr })
