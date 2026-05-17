@@ -27,7 +27,7 @@
 
 - **Flat structure** - all notes, todos and attachments live in one directory
 - **Denote-style filenames** - `YYYYMMDDTHHMMSS--title__tag1_tag2.md`
-- **Todo tracking** - todo/done status as regular tags (`__todo`, `__done`); configurable tag names; any note can be marked as todo or done from the keyboard; find by tag search
+- **Todo tracking** - todo/done status as regular tags (`__todo`, `__done`); configurable tag names; cycle any note through none/todo/done with one key; find by tag search
 - **Tag picker** - Telescope UI with multi-select and inline tag creation
 - **Tag search** - browse all tags across your notes and filter by one or more
 - **Tag rename** - rename a tag across all notes in one step; all affected files and backlinks updated automatically
@@ -104,8 +104,7 @@ require("denim").setup({
     search_untagged   = "<leader>ngu",
     rename_tag        = "<leader>ngr",
     -- todos
-    mark_todo         = "<leader>nxx",
-    mark_done         = "<leader>nxu",
+    cycle_workflow    = "<leader>nx",
     -- views
     open_index        = "<leader>nvi",
     open_stats        = "<leader>nvs",
@@ -125,14 +124,13 @@ require("denim").setup({
 | `<leader>nl` | Insert link to another note |
 | `<leader>nu` | Insert URL link from clipboard |
 | `<leader>nb` | Show backlinks to current note |
+| `<leader>nx` | Cycle workflow state: none → todo → done → none |
 | `<leader>ntn` | New note from template |
 | `<leader>ntN` | New template |
 | `<leader>nte` | Browse and edit templates |
 | `<leader>ngs` | Browse and search tags |
 | `<leader>ngu` | List notes without any tags |
 | `<leader>ngr` | Rename a tag across all notes |
-| `<leader>nxx` | Mark current note as todo |
-| `<leader>nxu` | Mark current note as done |
 | `<leader>nvi` | Open notes index |
 | `<leader>nvs` | Open notes statistics |
 | `<CR>` | Follow markdown link (inside note files) |
@@ -228,7 +226,7 @@ require("denim").setup({
 })
 ```
 
-`<leader>nxx` marks the current note as todo (adds the todo tag, or replaces done with todo if already marked done). `<leader>nxu` marks it as done (adds the done tag, or replaces todo with done). Both are no-ops if the note already has the target tag. The index and statistics views respect the configured tag names throughout.
+`<leader>nx` cycles the workflow state of the current note: no tag → todo → done → no tag. The index and statistics views respect the configured tag names throughout.
 
 When creating a note or todo, a Telescope picker appears after entering the title. Use `<Tab>` to toggle existing tags. To add new tags, type one or more space-separated names and press `<Enter>` - the picker re-opens with all previously-selected and newly-typed tags pre-selected, so you can keep selecting or deselecting. Press `<Enter>` with an empty prompt to finalize. Press `<Esc>` at any point to cancel without creating the note.
 
@@ -326,8 +324,7 @@ Attendees: $
 | `:DenimBacklinks` | Show backlinks to current note |
 | `:DenimPasteImage` | Paste file or image from clipboard |
 | `:DenimRefactor` | Refactor current note (rename + retag) |
-| `:DenimMarkTodo` | Mark current note as todo |
-| `:DenimMarkDone` | Mark current note as done |
+| `:DenimCycle` | Cycle workflow state: none → todo → done → none |
 | `:DenimIndex` | Open notes index |
 | `:DenimStats` | Open notes statistics |
 

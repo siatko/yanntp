@@ -147,61 +147,77 @@ describe("integration", function()
     end)
   end)
 
-  -- ─── mark_done ───────────────────────────────────────────────────────────────
+  -- ─── cycle_workflow ──────────────────────────────────────────────────────────
 
-  describe("mark_done", function()
-    it("renames todo tag to done tag", function()
-      local path = dir .. "/20260514--fix-bug__todo.md"
-      write_file(path, { "# FIX BUG", "" })
+  describe("cycle_workflow", function()
+    it("plain note → todo: adds todo tag", function()
+      local path = dir .. "/20260514--my-note.md"
+      write_file(path, { "# MY NOTE", "" })
       open_buf(path)
-      notes.mark_done()
+      notes.cycle_workflow()
       assert.equal(0, vim.fn.filereadable(path))
-      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--fix-bug__done.md"))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--my-note__todo.md"))
     end)
 
-    it("preserves other tags when marking done", function()
-      local path = dir .. "/20260514--tagged__todo_urgent_work.md"
-      write_file(path, { "# TAGGED", "" })
+    it("todo note → done: renames todo to done", function()
+      local path = dir .. "/20260514--my-note__todo.md"
+      write_file(path, { "# MY NOTE", "" })
       open_buf(path)
-      notes.mark_done()
-      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--tagged__done_urgent_work.md"))
-    end)
-
-    it("adds done tag to a plain note", function()
-      local path = dir .. "/20260514--plain-note.md"
-      write_file(path, { "# PLAIN NOTE", "" })
-      open_buf(path)
-      notes.mark_done()
+      notes.cycle_workflow()
       assert.equal(0, vim.fn.filereadable(path))
-      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--plain-note__done.md"))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--my-note__done.md"))
     end)
 
-    it("adds done tag to a note with other tags", function()
-      local path = dir .. "/20260514--note__work.md"
+    it("done note → plain: removes done tag", function()
+      local path = dir .. "/20260514--my-note__done.md"
+      write_file(path, { "# MY NOTE", "" })
+      open_buf(path)
+      notes.cycle_workflow()
+      assert.equal(0, vim.fn.filereadable(path))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--my-note.md"))
+    end)
+
+    it("preserves other tags across transitions", function()
+      local path = dir .. "/20260514--note__todo_work.md"
       write_file(path, { "# NOTE", "" })
       open_buf(path)
-      notes.mark_done()
+      notes.cycle_workflow()
       assert.equal(1, vim.fn.filereadable(dir .. "/20260514--note__done_work.md"))
     end)
 
-    it("does nothing when already done", function()
-      local path = dir .. "/20260514--done-note__done.md"
-      write_file(path, { "# DONE", "" })
+    it("done with other tags → plain: removes only done tag", function()
+      local path = dir .. "/20260514--note__done_work.md"
+      write_file(path, { "# NOTE", "" })
       open_buf(path)
-      notes.mark_done()
-      assert.equal(1, vim.fn.filereadable(path))
+      notes.cycle_workflow()
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--note__work.md"))
     end)
 
-    it("notifies when already done", function()
-      local path = dir .. "/20260514--done-note__done.md"
-      write_file(path, { "# DONE", "" })
+    it("uses custom workflow tags (none → todo)", function()
+      config.setup({ notes_dir = dir, workflow = { todo = "next", done = "completed" } })
+      local path = dir .. "/20260514--my-note.md"
+      write_file(path, { "# MY NOTE", "" })
       open_buf(path)
-      local notified = false
-      local orig = vim.notify
-      vim.notify = function(_, level) if level == vim.log.levels.INFO then notified = true end end
-      notes.mark_done()
-      vim.notify = orig
-      assert.truthy(notified)
+      notes.cycle_workflow()
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--my-note__next.md"))
+    end)
+
+    it("uses custom workflow tags (todo → done)", function()
+      config.setup({ notes_dir = dir, workflow = { todo = "next", done = "completed" } })
+      local path = dir .. "/20260514--my-note__next.md"
+      write_file(path, { "# MY NOTE", "" })
+      open_buf(path)
+      notes.cycle_workflow()
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--my-note__completed.md"))
+    end)
+
+    it("uses custom workflow tags (done → plain)", function()
+      config.setup({ notes_dir = dir, workflow = { todo = "next", done = "completed" } })
+      local path = dir .. "/20260514--my-note__completed.md"
+      write_file(path, { "# MY NOTE", "" })
+      open_buf(path)
+      notes.cycle_workflow()
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--my-note.md"))
     end)
 
     it("warns when outside the notes directory", function()
@@ -211,35 +227,22 @@ describe("integration", function()
       local warned = false
       local orig = vim.notify
       vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
-      notes.mark_done()
+      notes.cycle_workflow()
       vim.notify = orig
       assert.truthy(warned)
-      assert.equal(1, vim.fn.filereadable(tmp))
       vim.fn.delete(tmp)
     end)
 
-    it("updates backlinks when marking done (from todo)", function()
+    it("updates backlinks on transition", function()
       local path   = dir .. "/20260514--fix-bug__todo.md"
       local linker = dir .. "/20260514--linker.md"
       write_file(path,   { "# FIX BUG", "" })
       write_file(linker, { "# LINKER", "", "see [Fix Bug](20260514--fix-bug__todo.md)" })
       open_buf(path)
-      notes.mark_done()
+      notes.cycle_workflow()
       local line = vim.fn.readfile(linker)[3]
       assert.truthy(line:find("20260514--fix-bug__done.md", 1, true))
       assert.falsy(line:find("20260514--fix-bug__todo.md", 1, true))
-    end)
-
-    it("updates backlinks when marking done (from plain note)", function()
-      local path   = dir .. "/20260514--fix-bug.md"
-      local linker = dir .. "/20260514--linker.md"
-      write_file(path,   { "# FIX BUG", "" })
-      write_file(linker, { "# LINKER", "", "see [Fix Bug](20260514--fix-bug.md)" })
-      open_buf(path)
-      notes.mark_done()
-      local line = vim.fn.readfile(linker)[3]
-      assert.truthy(line:find("20260514--fix-bug__done.md", 1, true))
-      assert.falsy(line:find("20260514--fix-bug.md)", 1, true))
     end)
 
     it("closes the old buffer", function()
@@ -247,149 +250,85 @@ describe("integration", function()
       write_file(path, { "# CLOSE ME", "" })
       open_buf(path)
       local old_buf = vim.api.nvim_get_current_buf()
-      notes.mark_done()
+      notes.cycle_workflow()
       assert.falsy(vim.api.nvim_buf_is_valid(old_buf))
     end)
 
-    it("opens the done file in the current window", function()
-      local path = dir .. "/20260514--open-done__todo.md"
-      write_file(path, { "# OPEN DONE", "" })
-      open_buf(path)
-      notes.mark_done()
-      assert.equal(dir .. "/20260514--open-done__done.md", vim.fn.expand("%:p"))
-    end)
-
-    it("uses custom workflow tags", function()
-      config.setup({ notes_dir = dir, workflow = { todo = "next", done = "completed" } })
-      local path = dir .. "/20260514--fix-bug__next.md"
-      write_file(path, { "# FIX BUG", "" })
-      open_buf(path)
-      notes.mark_done()
-      assert.equal(0, vim.fn.filereadable(path))
-      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--fix-bug__completed.md"))
-    end)
-  end)
-
-  -- ─── mark_todo ───────────────────────────────────────────────────────────────
-
-  describe("mark_todo", function()
-    it("renames done tag to todo tag", function()
-      local path = dir .. "/20260514--fix-bug__done.md"
-      write_file(path, { "# FIX BUG", "" })
-      open_buf(path)
-      notes.mark_todo()
-      assert.equal(0, vim.fn.filereadable(path))
-      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--fix-bug__todo.md"))
-    end)
-
-    it("preserves other tags when marking as todo", function()
-      local path = dir .. "/20260514--tagged__done_urgent_work.md"
-      write_file(path, { "# TAGGED", "" })
-      open_buf(path)
-      notes.mark_todo()
-      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--tagged__todo_urgent_work.md"))
-    end)
-
-    it("adds todo tag to a plain note", function()
-      local path = dir .. "/20260514--plain-note.md"
-      write_file(path, { "# PLAIN NOTE", "" })
-      open_buf(path)
-      notes.mark_todo()
-      assert.equal(0, vim.fn.filereadable(path))
-      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--plain-note__todo.md"))
-    end)
-
-    it("adds todo tag to a note with other tags", function()
-      local path = dir .. "/20260514--note__work.md"
-      write_file(path, { "# NOTE", "" })
-      open_buf(path)
-      notes.mark_todo()
-      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--note__todo_work.md"))
-    end)
-
-    it("does nothing when already a todo", function()
-      local path = dir .. "/20260514--open-todo__todo.md"
-      write_file(path, { "# OPEN TODO", "" })
-      open_buf(path)
-      notes.mark_todo()
-      assert.equal(1, vim.fn.filereadable(path))
-    end)
-
-    it("notifies when already a todo", function()
-      local path = dir .. "/20260514--open-todo__todo.md"
-      write_file(path, { "# OPEN TODO", "" })
-      open_buf(path)
-      local notified = false
-      local orig = vim.notify
-      vim.notify = function(_, level) if level == vim.log.levels.INFO then notified = true end end
-      notes.mark_todo()
-      vim.notify = orig
-      assert.truthy(notified)
-    end)
-
-    it("warns when outside the notes directory", function()
-      local tmp = vim.fn.tempname() .. "--outside.md"
-      write_file(tmp, { "# OUTSIDE", "" })
-      open_buf(tmp)
-      local warned = false
-      local orig = vim.notify
-      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
-      notes.mark_todo()
-      vim.notify = orig
-      assert.truthy(warned)
-      assert.equal(1, vim.fn.filereadable(tmp))
-      vim.fn.delete(tmp)
-    end)
-
-    it("updates backlinks when marking as todo (from done)", function()
-      local path   = dir .. "/20260514--fix-bug__done.md"
-      local linker = dir .. "/20260514--linker.md"
-      write_file(path,   { "# FIX BUG", "" })
-      write_file(linker, { "# LINKER", "", "see [Fix Bug](20260514--fix-bug__done.md)" })
-      open_buf(path)
-      notes.mark_todo()
-      local line = vim.fn.readfile(linker)[3]
-      assert.truthy(line:find("20260514--fix-bug__todo.md", 1, true))
-      assert.falsy(line:find("20260514--fix-bug__done.md", 1, true))
-    end)
-
-    it("updates backlinks when marking as todo (from plain note)", function()
-      local path   = dir .. "/20260514--fix-bug.md"
-      local linker = dir .. "/20260514--linker.md"
-      write_file(path,   { "# FIX BUG", "" })
-      write_file(linker, { "# LINKER", "", "see [Fix Bug](20260514--fix-bug.md)" })
-      open_buf(path)
-      notes.mark_todo()
-      local line = vim.fn.readfile(linker)[3]
-      assert.truthy(line:find("20260514--fix-bug__todo.md", 1, true))
-      assert.falsy(line:find("20260514--fix-bug.md)", 1, true))
-    end)
-
-    it("closes the old buffer", function()
-      local path = dir .. "/20260514--close-me__done.md"
-      write_file(path, { "# CLOSE ME", "" })
-      open_buf(path)
-      local old_buf = vim.api.nvim_get_current_buf()
-      notes.mark_todo()
-      assert.falsy(vim.api.nvim_buf_is_valid(old_buf))
-    end)
-
-    it("opens the todo file in the current window", function()
-      local path = dir .. "/20260514--open-me__done.md"
+    it("opens the new file in the current window", function()
+      local path = dir .. "/20260514--open-me__todo.md"
       write_file(path, { "# OPEN ME", "" })
       open_buf(path)
-      notes.mark_todo()
-      assert.equal(dir .. "/20260514--open-me__todo.md", vim.fn.expand("%:p"))
+      notes.cycle_workflow()
+      assert.equal(dir .. "/20260514--open-me__done.md", vim.fn.expand("%:p"))
     end)
 
-    it("uses custom workflow tags", function()
-      config.setup({ notes_dir = dir, workflow = { todo = "next", done = "completed" } })
-      local path = dir .. "/20260514--fix-bug__completed.md"
-      write_file(path, { "# FIX BUG", "" })
+    it("notifies with todo tag name when cycling from plain", function()
+      local path = dir .. "/20260514--my-note.md"
+      write_file(path, { "# MY NOTE", "" })
       open_buf(path)
-      notes.mark_todo()
-      assert.equal(0, vim.fn.filereadable(path))
-      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--fix-bug__next.md"))
+      local msg
+      local orig = vim.notify
+      vim.notify = function(m) msg = m end
+      notes.cycle_workflow()
+      vim.notify = orig
+      assert.truthy(msg:find("todo", 1, true))
+    end)
+
+    it("notifies with done tag name when cycling from todo", function()
+      local path = dir .. "/20260514--my-note__todo.md"
+      write_file(path, { "# MY NOTE", "" })
+      open_buf(path)
+      local msg
+      local orig = vim.notify
+      vim.notify = function(m) msg = m end
+      notes.cycle_workflow()
+      vim.notify = orig
+      assert.truthy(msg:find("done", 1, true))
+    end)
+
+    it("notifies with 'note' when cycling from done", function()
+      local path = dir .. "/20260514--my-note__done.md"
+      write_file(path, { "# MY NOTE", "" })
+      open_buf(path)
+      local msg
+      local orig = vim.notify
+      vim.notify = function(m) msg = m end
+      notes.cycle_workflow()
+      vim.notify = orig
+      assert.truthy(msg:find("note", 1, true))
+    end)
+
+    it("notifies with custom tag names", function()
+      config.setup({ notes_dir = dir, workflow = { todo = "next", done = "completed" } })
+      local path = dir .. "/20260514--my-note.md"
+      write_file(path, { "# MY NOTE", "" })
+      open_buf(path)
+      local msg
+      local orig = vim.notify
+      vim.notify = function(m) msg = m end
+      notes.cycle_workflow()
+      vim.notify = orig
+      assert.truthy(msg:find("next", 1, true))
+    end)
+
+    it("full round-trip: plain → todo → done → plain", function()
+      local plain = dir .. "/20260514--round-trip.md"
+      local todo  = dir .. "/20260514--round-trip__todo.md"
+      local done  = dir .. "/20260514--round-trip__done.md"
+      write_file(plain, { "# ROUND TRIP", "" })
+
+      open_buf(plain)
+      notes.cycle_workflow()
+      assert.equal(1, vim.fn.filereadable(todo))
+      assert.equal(0, vim.fn.filereadable(plain))
+
+      notes.cycle_workflow()
+      assert.equal(1, vim.fn.filereadable(done))
+      assert.equal(0, vim.fn.filereadable(todo))
+
+      notes.cycle_workflow()
+      assert.equal(1, vim.fn.filereadable(plain))
+      assert.equal(0, vim.fn.filereadable(done))
     end)
   end)
 

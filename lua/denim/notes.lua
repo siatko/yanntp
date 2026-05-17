@@ -156,7 +156,7 @@ function M.follow_link()
   if path then open_path(path) end
 end
 
-function M.mark_done()
+function M.cycle_workflow()
   local opts     = get_opts()
   local filepath = vim.fn.expand("%:p")
 
@@ -165,61 +165,21 @@ function M.mark_done()
     return
   end
 
-  local filename  = vim.fn.fnamemodify(filepath, ":t")
-  local todo_tag  = opts.workflow.todo
-  local done_tag  = opts.workflow.done
-  local tags      = tags_from_filename(filename)
-  local has_todo  = vim.tbl_contains(tags, todo_tag)
-  local has_done  = vim.tbl_contains(tags, done_tag)
+  local filename = vim.fn.fnamemodify(filepath, ":t")
+  local todo_tag = opts.workflow.todo
+  local done_tag = opts.workflow.done
+  local tags     = tags_from_filename(filename)
 
-  if has_done then
-    vim.notify("denim: already done", vim.log.levels.INFO)
-    return
-  end
-
-  local new_filename, ok
-  if has_todo then
+  local new_filename, ok, label
+  if vim.tbl_contains(tags, done_tag) then
+    new_filename, ok = utils.remove_tag_from_filename(filename, done_tag)
+    label = "note"
+  elseif vim.tbl_contains(tags, todo_tag) then
     new_filename, ok = utils.rename_tag_in_filename(filename, todo_tag, done_tag)
-  else
-    new_filename, ok = utils.add_tag_to_filename(filename, done_tag)
-  end
-  if not ok then return end
-
-  local new_filepath = vim.fn.fnamemodify(filepath, ":h") .. "/" .. new_filename
-  local old_buf = vim.api.nvim_get_current_buf()
-  vim.fn.rename(filepath, new_filepath)
-  require("denim.telescope").update_links_to(filepath, new_filepath)
-  vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
-  vim.api.nvim_buf_delete(old_buf, { force = true })
-  vim.notify("denim: done — " .. new_filename, vim.log.levels.INFO)
-end
-
-function M.mark_todo()
-  local opts     = get_opts()
-  local filepath = vim.fn.expand("%:p")
-
-  if not vim.startswith(filepath, opts.notes_dir) then
-    vim.notify("denim: current file is not in notes directory", vim.log.levels.WARN)
-    return
-  end
-
-  local filename  = vim.fn.fnamemodify(filepath, ":t")
-  local todo_tag  = opts.workflow.todo
-  local done_tag  = opts.workflow.done
-  local tags      = tags_from_filename(filename)
-  local has_todo  = vim.tbl_contains(tags, todo_tag)
-  local has_done  = vim.tbl_contains(tags, done_tag)
-
-  if has_todo then
-    vim.notify("denim: already a todo", vim.log.levels.INFO)
-    return
-  end
-
-  local new_filename, ok
-  if has_done then
-    new_filename, ok = utils.rename_tag_in_filename(filename, done_tag, todo_tag)
+    label = done_tag
   else
     new_filename, ok = utils.add_tag_to_filename(filename, todo_tag)
+    label = todo_tag
   end
   if not ok then return end
 
@@ -229,7 +189,7 @@ function M.mark_todo()
   require("denim.telescope").update_links_to(filepath, new_filepath)
   vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
   vim.api.nvim_buf_delete(old_buf, { force = true })
-  vim.notify("denim: todo — " .. new_filename, vim.log.levels.INFO)
+  vim.notify("denim: " .. label .. " — " .. new_filename, vim.log.levels.INFO)
 end
 
 function M.refactor()
