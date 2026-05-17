@@ -328,43 +328,109 @@ function M.refactor()
   end)
 end
 
+local image_exts = {
+  png = true, jpg = true, jpeg = true, gif = true, webp = true,
+  svg = true, bmp = true, tiff = true, tif = true, ico = true, avif = true,
+}
+
+local function parse_file_uri(clip)
+  local stripped = clip:gsub("%s+$", "")
+  if not stripped:match("^file://") then return nil end
+  -- reject multiple URIs
+  if stripped:match("[\r\n]") then
+    vim.notify("denim: only a single file can be pasted at a time", vim.log.levels.WARN)
+    return nil
+  end
+  local path = stripped:gsub("^file://", ""):gsub("%%(%x%x)", function(h)
+    return string.char(tonumber(h, 16))
+  end)
+  return path
+end
+
+local function paste_name_tags_then(prompt, cb)
+  vim.ui.input({ prompt = prompt }, function(name)
+    if not name or name == "" then return end
+    vim.schedule(function()
+      require("denim.telescope").pick_tags(function(tags)
+        cb(name, tags)
+      end)
+    end)
+  end)
+end
+
+local function insert_link_at_cursor(link)
+  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  local ln = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
+  vim.api.nvim_buf_set_lines(0, row - 1, row, false,
+    { ln:sub(1, col + 1) .. link .. ln:sub(col + 2) })
+  vim.api.nvim_win_set_cursor(0, { row, col + #link })
+end
+
 function M.paste_image()
+  local opts = get_opts()
+  vim.fn.mkdir(opts.notes_dir, "p")
+
+  local src = parse_file_uri(vim.fn.getreg("+"))
+  if src then
+    if vim.fn.filereadable(src) == 0 then
+      vim.notify("denim: file not readable: " .. src, vim.log.levels.ERROR)
+      return
+    end
+    local ext = src:match("%.([^.]+)$") or ""
+    local is_image = image_exts[ext:lower()]
+
+    paste_name_tags_then("File name: ", function(name, tags)
+      local date = os.date("%Y%m%dT%H%M%S")
+      local slugged = vim.tbl_map(slugify_tag, tags)
+      table.sort(slugged)
+      local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
+      local file_name = date .. "--" .. slugify_title(name) .. tag_suffix .. "." .. ext
+      local dest = opts.notes_dir .. "/" .. file_name
+      if vim.fn.filereadable(dest) == 1 then
+        vim.notify("denim: file already exists: " .. file_name, vim.log.levels.WARN)
+        return
+      end
+      local ok, err = vim.uv.fs_copyfile(src, dest)
+      if not ok then
+        vim.notify("denim: failed to copy file: " .. (err or ""), vim.log.levels.ERROR)
+        return
+      end
+      local link = is_image
+        and string.format("![%s](%s)", name, file_name)
+        or  string.format("[%s](%s)", name, file_name)
+      insert_link_at_cursor(link)
+    end)
+    return
+  end
+
+  -- No file URI in clipboard - fall through to img-clip for raw image data
   local ok, img_clip = pcall(require, "img-clip")
   if not ok then
     vim.notify("denim: img-clip.nvim is required for image pasting", vim.log.levels.ERROR)
     return
   end
 
-  local opts = get_opts()
-  vim.fn.mkdir(opts.notes_dir, "p")
-
-  vim.ui.input({ prompt = "Image name: " }, function(name)
-    if not name or name == "" then return end
-    vim.schedule(function()
-      require("denim.telescope").pick_tags(function(tags)
-        local date = os.date("%Y%m%dT%H%M%S")
-        local slugged = vim.tbl_map(slugify_tag, tags)
-        table.sort(slugged)
-        local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
-        local file_name = date .. "--" .. slugify_title(name) .. tag_suffix
-        local existing = vim.fn.glob(opts.notes_dir .. "/" .. file_name .. ".*")
-        if existing ~= "" then
-          vim.notify(
-            "denim: image already exists: " .. vim.fn.fnamemodify(existing, ":t"),
-            vim.log.levels.WARN
-          )
-          return
-        end
-
-        img_clip.paste_image({
-          dir_path = opts.notes_dir,
-          file_name = file_name,
-          prompt_for_file_name = false,
-          insert_mode_after_paste = false,
-          template = "![$FILE_NAME_NO_EXT]($FILE_NAME)",
-        })
-      end)
-    end)
+  paste_name_tags_then("Image name: ", function(name, tags)
+    local date = os.date("%Y%m%dT%H%M%S")
+    local slugged = vim.tbl_map(slugify_tag, tags)
+    table.sort(slugged)
+    local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
+    local file_name = date .. "--" .. slugify_title(name) .. tag_suffix
+    local existing = vim.fn.glob(opts.notes_dir .. "/" .. file_name .. ".*")
+    if existing ~= "" then
+      vim.notify(
+        "denim: image already exists: " .. vim.fn.fnamemodify(existing, ":t"),
+        vim.log.levels.WARN
+      )
+      return
+    end
+    img_clip.paste_image({
+      dir_path = opts.notes_dir,
+      file_name = file_name,
+      prompt_for_file_name = false,
+      insert_mode_after_paste = false,
+      template = "![$FILE_NAME_NO_EXT]($FILE_NAME)",
+    })
   end)
 end
 
