@@ -25,22 +25,20 @@
 
 ## Features
 
-- **Quick capture** - title prompt + floating markdown editor from anywhere; stays in your current buffer; auto-tagged with a configurable tag (default `quick`); uses a matching template if one exists
-- **Flat structure** - all notes, todos and attachments live in one directory
-- **Denote-style filenames** - `YYYYMMDDTHHMMSS--title__tag1_tag2.md`
-- **Todo tracking** - todo/done status as regular tags (`__todo`, `__done`); configurable tag names; cycle any note through none/todo/done with one key; find by tag search
-- **Tag picker** - Telescope UI with multi-select and inline tag creation
-- **Tag search** - browse all tags across your notes and filter by one or more
-- **Tag rename** - rename a tag across all notes in one step; all affected files and backlinks updated automatically
-- **Templates** - create notes from `.md` files in `notes_dir/.templates/`; place `$` in a template for cursor stops - Tab steps through each one; templates are excluded from all search results
+- **Flat structure** - all notes, todos, and attachments in one directory
+- **Denote-style filenames** - `YYYYMMDDTHHMMSS--title__tag1_tag2.md`; the filename is the metadata - no frontmatter, no database
 - **Full-text search** - live grep across all note contents
-- **Note linking** - insert markdown links to other notes, follow links with `<CR>` or ctrl+click
-- **URL linking** - insert URL links from clipboard with `<leader>nu`; `<CR>` and ctrl+click on URL links open the browser
-- **Backlinks** - find all notes that link to the current note
-- **Refactor** - rename and retag the current note in one step; all linking notes updated automatically
-- **File paste** - paste any file from the clipboard into your notes dir with a denim filename; image files get an image link, all other types get a plain link; raw clipboard images fall through to img-clip
-- **Notes index** - virtual buffer listing all notes grouped by date with status indicators
-- **Statistics** - note counts, todo counts, tag usage and monthly activity at a glance
+- **Note linking** - insert markdown links to other notes; follow with `<CR>` or ctrl+click; find all backlinks to the current note
+- **Todo tracking** - todo/done as regular tags; cycle any note through none/todo/done with one key
+- **Quick capture** - floating markdown editor that doesn't interrupt your current buffer; auto-tagged; template-aware
+- **Templates** - create notes from `.md` files in `.templates/`; `$` marks tab stops; Tab steps through each one
+- **Tag search** - browse all tags and filter notes by one or more; list untagged notes
+- **Tag rename** - rename a tag across all notes in one step; all backlinks updated automatically
+- **Refactor** - rename and retag the current note; all backlinks updated automatically
+- **URL linking** - insert URL links from clipboard; `<CR>` and ctrl+click open the browser
+- **File paste** - paste any file or image from clipboard with a denim filename
+- **Notes index** - virtual buffer listing all notes grouped by date with todo status markers
+- **Statistics** - note counts, tag usage, and monthly activity at a glance
 
 ## Requirements
 
