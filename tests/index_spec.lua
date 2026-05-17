@@ -23,19 +23,19 @@ describe("build_lines", function()
   it("renders an open todo with checkbox", function()
     local notes = {
       { date = "20260514", date_fmt = "2026-05-14", status = "open_todo",
-        title = "Fix Bug", rel_path = "todos/20260514-O-fix-bug.md" },
+        title = "Fix Bug", rel_path = "20260514--fix-bug__todo.md" },
     }
     local lines = build_lines(notes)
-    assert.truthy(vim.tbl_contains(lines, "- [ ] [Fix Bug](todos/20260514-O-fix-bug.md)"))
+    assert.truthy(vim.tbl_contains(lines, "- [ ] [Fix Bug](20260514--fix-bug__todo.md)"))
   end)
 
   it("renders a done todo with checked checkbox", function()
     local notes = {
       { date = "20260514", date_fmt = "2026-05-14", status = "done_todo",
-        title = "Write Tests", rel_path = "todos/20260514-X-write-tests.md" },
+        title = "Write Tests", rel_path = "20260514--write-tests__done.md" },
     }
     local lines = build_lines(notes)
-    assert.truthy(vim.tbl_contains(lines, "- [x] [Write Tests](todos/20260514-X-write-tests.md)"))
+    assert.truthy(vim.tbl_contains(lines, "- [x] [Write Tests](20260514--write-tests__done.md)"))
   end)
 
   it("groups notes under date headers", function()

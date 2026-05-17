@@ -145,40 +145,6 @@ function M.new_note_from_template()
   end)
 end
 
-function M.new_todo_from_template()
-  local opts = get_opts()
-  vim.fn.mkdir(opts.notes_dir, "p")
-
-  require("denim.telescope").pick_template(function(tmpl_path)
-    vim.ui.input({ prompt = "Todo name: " }, function(name)
-      if not name or name == "" then return end
-      vim.schedule(function()
-        require("denim.telescope").pick_tags(function(tags)
-          local date    = os.date("%Y%m%dT%H%M%S")
-          local slug    = slugify_title(name)
-          local slugged = vim.tbl_map(slugify_tag, tags)
-          table.sort(slugged)
-          local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
-          local filename   = date .. "-O-" .. slug .. tag_suffix .. ".md"
-          local filepath   = opts.notes_dir .. "/" .. filename
-
-          if vim.fn.filereadable(filepath) == 1 then
-            vim.notify("denim: todo already exists, opening: " .. filename, vim.log.levels.INFO)
-            vim.cmd("edit " .. vim.fn.fnameescape(filepath))
-            return
-          end
-
-          local tmpl_lines = vim.fn.readfile(tmpl_path)
-          vim.fn.writefile(tmpl_lines, filepath)
-          vim.cmd("edit " .. vim.fn.fnameescape(filepath))
-          vim.schedule(function()
-            activate_tab_stops(vim.api.nvim_get_current_buf())
-          end)
-        end)
-      end)
-    end)
-  end)
-end
 
 function M.follow_link()
   local opts     = get_opts()
@@ -190,40 +156,7 @@ function M.follow_link()
   if path then open_path(path) end
 end
 
-function M.new_todo()
-  local opts = get_opts()
-  vim.fn.mkdir(opts.notes_dir, "p")
-
-  vim.ui.input({ prompt = "Todo name: " }, function(name)
-    if not name or name == "" then return end
-    vim.schedule(function()
-      require("denim.telescope").pick_tags(function(tags)
-        local date = os.date("%Y%m%dT%H%M%S")
-        local slug = slugify_title(name)
-        local slugged = vim.tbl_map(slugify_tag, tags)
-        table.sort(slugged)
-        local tag_suffix = #slugged > 0 and ("__" .. table.concat(slugged, "_")) or ""
-        local filename = date .. "-O-" .. slug .. tag_suffix .. ".md"
-        local filepath = opts.notes_dir .. "/" .. filename
-
-        if vim.fn.filereadable(filepath) == 1 then
-          vim.notify("denim: todo already exists, opening: " .. filename, vim.log.levels.INFO)
-          vim.cmd("edit " .. vim.fn.fnameescape(filepath))
-          return
-        end
-
-        vim.fn.writefile({}, filepath)
-        vim.cmd("edit " .. vim.fn.fnameescape(filepath))
-        vim.schedule(function()
-          vim.api.nvim_win_set_cursor(0, { 1, 0 })
-          vim.cmd("startinsert")
-        end)
-      end)
-    end)
-  end)
-end
-
-function M.todo_done()
+function M.mark_done()
   local opts     = get_opts()
   local filepath = vim.fn.expand("%:p")
 
@@ -232,16 +165,27 @@ function M.todo_done()
     return
   end
 
-  local filename = vim.fn.fnamemodify(filepath, ":t")
+  local filename  = vim.fn.fnamemodify(filepath, ":t")
+  local todo_tag  = opts.workflow.todo
+  local done_tag  = opts.workflow.done
+  local tags      = tags_from_filename(filename)
+  local has_todo  = vim.tbl_contains(tags, todo_tag)
+  local has_done  = vim.tbl_contains(tags, done_tag)
 
-  if not filename:find("-O-", 1, true) then
-    vim.notify("denim: current file is not an open todo", vim.log.levels.WARN)
+  if has_done then
+    vim.notify("denim: already done", vim.log.levels.INFO)
     return
   end
 
-  local new_filename = filename:gsub("%-O%-", "-X-", 1)
-  local new_filepath = vim.fn.fnamemodify(filepath, ":h") .. "/" .. new_filename
+  local new_filename, ok
+  if has_todo then
+    new_filename, ok = utils.rename_tag_in_filename(filename, todo_tag, done_tag)
+  else
+    new_filename, ok = utils.add_tag_to_filename(filename, done_tag)
+  end
+  if not ok then return end
 
+  local new_filepath = vim.fn.fnamemodify(filepath, ":h") .. "/" .. new_filename
   local old_buf = vim.api.nvim_get_current_buf()
   vim.fn.rename(filepath, new_filepath)
   require("denim.telescope").update_links_to(filepath, new_filepath)
@@ -250,7 +194,7 @@ function M.todo_done()
   vim.notify("denim: done — " .. new_filename, vim.log.levels.INFO)
 end
 
-function M.todo_undone()
+function M.mark_todo()
   local opts     = get_opts()
   local filepath = vim.fn.expand("%:p")
 
@@ -259,22 +203,33 @@ function M.todo_undone()
     return
   end
 
-  local filename = vim.fn.fnamemodify(filepath, ":t")
+  local filename  = vim.fn.fnamemodify(filepath, ":t")
+  local todo_tag  = opts.workflow.todo
+  local done_tag  = opts.workflow.done
+  local tags      = tags_from_filename(filename)
+  local has_todo  = vim.tbl_contains(tags, todo_tag)
+  local has_done  = vim.tbl_contains(tags, done_tag)
 
-  if not filename:find("-X-", 1, true) then
-    vim.notify("denim: current file is not a done todo", vim.log.levels.WARN)
+  if has_todo then
+    vim.notify("denim: already a todo", vim.log.levels.INFO)
     return
   end
 
-  local new_filename = filename:gsub("%-X%-", "-O-", 1)
-  local new_filepath = vim.fn.fnamemodify(filepath, ":h") .. "/" .. new_filename
+  local new_filename, ok
+  if has_done then
+    new_filename, ok = utils.rename_tag_in_filename(filename, done_tag, todo_tag)
+  else
+    new_filename, ok = utils.add_tag_to_filename(filename, todo_tag)
+  end
+  if not ok then return end
 
+  local new_filepath = vim.fn.fnamemodify(filepath, ":h") .. "/" .. new_filename
   local old_buf = vim.api.nvim_get_current_buf()
   vim.fn.rename(filepath, new_filepath)
   require("denim.telescope").update_links_to(filepath, new_filepath)
   vim.cmd("edit " .. vim.fn.fnameescape(new_filepath))
   vim.api.nvim_buf_delete(old_buf, { force = true })
-  vim.notify("denim: reopened — " .. new_filename, vim.log.levels.INFO)
+  vim.notify("denim: todo — " .. new_filename, vim.log.levels.INFO)
 end
 
 function M.refactor()
@@ -294,9 +249,7 @@ function M.refactor()
   local current_tags = tags_from_filename(filename)
   local base         = filename:match("^(.-)__[^%.]+%.md$") or filename:match("^(.-)%.md$")
 
-  -- Split base into date+marker prefix and slug
-  -- Formats: YYYYMMDD--slug  /  YYYYMMDD-O-slug  /  YYYYMMDD-X-slug
-  local date_and_marker = base:match("^(%d+T?%d*%-[OX]%-)") or base:match("^(%d+T?%d*%-%-)")
+  local date_and_marker = base:match("^(%d+T?%d*%-%-)")
   local current_slug    = date_and_marker and base:sub(#date_and_marker + 1) or base
 
   vim.ui.input({ prompt = "Note name: ", default = current_slug }, function(name)

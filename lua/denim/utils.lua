@@ -72,6 +72,18 @@ function M.rename_tag_in_filename(filename, old_tag, new_tag)
   return base .. suffix .. ".md", true
 end
 
+function M.add_tag_to_filename(filename, tag)
+  local base = filename:match("^(.-)__[^%.]+%.md$") or filename:match("^(.-)%.md$")
+  if not base then return filename, false end
+  local existing = M.tags_from_filename(filename)
+  for _, t in ipairs(existing) do
+    if t == tag then return filename, false end
+  end
+  table.insert(existing, tag)
+  table.sort(existing)
+  return base .. "__" .. table.concat(existing, "_") .. ".md", true
+end
+
 function M.resolve_slug(name, current_title, current_slug)
   if name == "" or name:lower() == current_title:lower() then
     return current_slug

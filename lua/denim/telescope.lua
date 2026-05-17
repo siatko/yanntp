@@ -455,27 +455,6 @@ function M.search_templates()
   })
 end
 
-function M.list_open_todos()
-  local t = get_telescope()
-  if not t then return end
-  local notes_dir = get_opts().notes_dir
-  t.find_files({
-    prompt_title = "Open Todos",
-    cwd = notes_dir,
-    find_command = { "find", notes_dir, "-maxdepth", "1", "-name", "*-O-*.md" },
-  })
-end
-
-function M.list_done_todos()
-  local t = get_telescope()
-  if not t then return end
-  local notes_dir = get_opts().notes_dir
-  t.find_files({
-    prompt_title = "Done Todos",
-    cwd = notes_dir,
-    find_command = { "find", notes_dir, "-maxdepth", "1", "-name", "*-X-*.md" },
-  })
-end
 
 function M.rename_tag()
   local notes_dir = get_opts().notes_dir

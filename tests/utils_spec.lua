@@ -101,10 +101,6 @@ describe("tags_from_filename", function()
     assert.same({ "pkm", "writing" }, utils.tags_from_filename("20260514--my-note__pkm_writing.md"))
   end)
 
-  it("handles todo filenames", function()
-    assert.same({ "backend" }, utils.tags_from_filename("20260514-O-fix-bug__backend.md"))
-  end)
-
   it("returns empty table for filename with no extension match", function()
     assert.same({}, utils.tags_from_filename("notanotefile.txt"))
   end)
@@ -113,8 +109,12 @@ describe("tags_from_filename", function()
     assert.same({ "lua" }, utils.tags_from_filename("20260515T143022--my-note__lua.md"))
   end)
 
-  it("handles done todo filenames", function()
-    assert.same({ "backend" }, utils.tags_from_filename("20260514-X-fix-bug__backend.md"))
+  it("returns todo tag from todo filename", function()
+    assert.same({ "backend", "todo" }, utils.tags_from_filename("20260514--fix-bug__backend_todo.md"))
+  end)
+
+  it("returns done tag from done filename", function()
+    assert.same({ "done", "work" }, utils.tags_from_filename("20260514--fix-bug__done_work.md"))
   end)
 end)
 
@@ -183,10 +183,48 @@ describe("rename_tag_in_filename", function()
     assert.equal("20260101--note__bar.md", f)
   end)
 
-  it("works with todo filenames", function()
-    local f, ok = utils.rename_tag_in_filename("20260101-O-fix-bug__backend_foo.md", "foo", "ops")
+  it("renames todo tag to done tag", function()
+    local f, ok = utils.rename_tag_in_filename("20260101--fix-bug__backend_todo.md", "todo", "done")
     assert.is_true(ok)
-    assert.equal("20260101-O-fix-bug__backend_ops.md", f)
+    assert.equal("20260101--fix-bug__backend_done.md", f)
+  end)
+
+  it("renames done tag back to todo tag", function()
+    local f, ok = utils.rename_tag_in_filename("20260101--fix-bug__done_work.md", "done", "todo")
+    assert.is_true(ok)
+    assert.equal("20260101--fix-bug__todo_work.md", f)
+  end)
+end)
+
+describe("add_tag_to_filename", function()
+  it("adds tag to a file with no existing tags", function()
+    local f, ok = utils.add_tag_to_filename("20260101--note.md", "todo")
+    assert.is_true(ok)
+    assert.equal("20260101--note__todo.md", f)
+  end)
+
+  it("adds tag sorted among existing tags", function()
+    local f, ok = utils.add_tag_to_filename("20260101--note__work.md", "done")
+    assert.is_true(ok)
+    assert.equal("20260101--note__done_work.md", f)
+  end)
+
+  it("inserts tag in alphabetical order", function()
+    local f, ok = utils.add_tag_to_filename("20260101--note__alpha_zebra.md", "mango")
+    assert.is_true(ok)
+    assert.equal("20260101--note__alpha_mango_zebra.md", f)
+  end)
+
+  it("returns false when tag already present", function()
+    local f, ok = utils.add_tag_to_filename("20260101--note__todo_work.md", "todo")
+    assert.is_false(ok)
+    assert.equal("20260101--note__todo_work.md", f)
+  end)
+
+  it("returns false for non-md files", function()
+    local f, ok = utils.add_tag_to_filename("20260101--diagram.png", "todo")
+    assert.is_false(ok)
+    assert.equal("20260101--diagram.png", f)
   end)
 end)
 
@@ -312,13 +350,13 @@ describe("multiterm_match", function()
     assert.is_true(utils.multiterm_match("  rust  ", "20260101--my-journal__rust_journal.md"))
   end)
 
-  -- todo filenames
-  it("matches open todo filenames", function()
-    assert.is_true(utils.multiterm_match("_backend -O-", "20260101-O-fix-bug__backend.md"))
+  -- todo/done tag matching
+  it("matches files with todo tag", function()
+    assert.is_true(utils.multiterm_match("_backend _todo", "20260101--fix-bug__backend_todo.md"))
   end)
 
-  it("matches done todo filenames", function()
-    assert.is_true(utils.multiterm_match("_backend -X-", "20260101-X-fix-bug__backend.md"))
+  it("matches files with done tag", function()
+    assert.is_true(utils.multiterm_match("_backend _done", "20260101--fix-bug__backend_done.md"))
   end)
 
   -- timestamp matching

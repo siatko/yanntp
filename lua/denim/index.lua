@@ -1,5 +1,7 @@
 local M = {}
 
+local utils = require("denim.utils")
+
 local function get_opts()
   return require("denim.config").options
 end
@@ -14,10 +16,14 @@ local function gather_notes(notes_dir)
     local filename = vim.fn.fnamemodify(filepath, ":t")
     local date_raw = filename:match("^(%d%d%d%d%d%d%d%d)")
     if date_raw then
+      local workflow = get_opts().workflow
+      local tags = utils.tags_from_filename(filename)
+      local tag_set = {}
+      for _, t in ipairs(tags) do tag_set[t] = true end
       local status = "note"
-      if filename:match("^%d+T?%d*%-O%-") then
+      if tag_set[workflow.todo] then
         status = "open_todo"
-      elseif filename:match("^%d+T?%d*%-X%-") then
+      elseif tag_set[workflow.done] then
         status = "done_todo"
       end
 

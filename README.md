@@ -27,7 +27,7 @@
 
 - **Flat structure** - all notes, todos and attachments live in one directory
 - **Denote-style filenames** - `YYYYMMDDTHHMMSS--title__tag1_tag2.md`
-- **Todo tracking** - open (`-O-`) and done (`-X-`) status embedded in filename; todos can be marked done or reopened
+- **Todo tracking** - todo/done status as regular tags (`__todo`, `__done`); configurable tag names; any note can be marked as todo or done from the keyboard; find by tag search
 - **Tag picker** - Telescope UI with multi-select and inline tag creation
 - **Tag search** - browse all tags across your notes and filter by one or more
 - **Tag rename** - rename a tag across all notes in one step; all affected files and backlinks updated automatically
@@ -78,6 +78,13 @@ All keys are optional - only set what you want to override:
 require("denim").setup({
   notes_dir = "~/notes",
 
+  -- Tag names used for todo status. Change to match your preferred workflow,
+  -- e.g. { todo = "next", done = "completed" } to follow GTD conventions.
+  workflow = {
+    todo = "todo",
+    done = "done",
+  },
+
   keymaps = {
     -- basic
     new_note          = "<leader>nn",
@@ -97,12 +104,8 @@ require("denim").setup({
     search_untagged   = "<leader>ngu",
     rename_tag        = "<leader>ngr",
     -- todos
-    new_todo          = "<leader>nxn",
-    new_todo_from_template = "<leader>nxt",
-    open_todos        = "<leader>nxo",
-    done_todos        = "<leader>nxd",
-    todo_done         = "<leader>nxx",
-    todo_undone       = "<leader>nxu",
+    mark_todo         = "<leader>nxx",
+    mark_done         = "<leader>nxu",
     -- views
     open_index        = "<leader>nvi",
     open_stats        = "<leader>nvs",
@@ -128,12 +131,8 @@ require("denim").setup({
 | `<leader>ngs` | Browse and search tags |
 | `<leader>ngu` | List notes without any tags |
 | `<leader>ngr` | Rename a tag across all notes |
-| `<leader>nxn` | New todo |
-| `<leader>nxt` | New todo from template |
-| `<leader>nxo` | List open todos |
-| `<leader>nxd` | List done todos |
-| `<leader>nxx` | Mark current todo as done |
-| `<leader>nxu` | Reopen a done todo |
+| `<leader>nxx` | Mark current note as todo |
+| `<leader>nxu` | Mark current note as done |
 | `<leader>nvi` | Open notes index |
 | `<leader>nvs` | Open notes statistics |
 | `<CR>` | Follow markdown link (inside note files) |
@@ -161,10 +160,12 @@ The timestamp makes every note unique even if you create two with the same title
 20260514T161500--meeting-notes.md
 ```
 
-**Todos** — status lives between the timestamp and the title
+**Todos** — `todo` and `done` are regular tags, sorted alphabetically with all other tags; their position in the filename is not significant
 ```
-20260514T143022-O-fix-login-bug__backend.md   (open)
-20260514T143022-X-fix-login-bug__backend.md   (done)
+20260514T143022--fix-login-bug__todo.md         (open, only tag)
+20260514T143022--fix-login-bug__backend_todo.md (open, b < t so backend sorts first)
+20260514T143022--fix-login-bug__done_work.md    (done, d < w so done sorts first)
+20260514T143022--fix-login-bug__backend_done.md (done, b < d so backend sorts first)
 ```
 
 **Attachments**
@@ -180,11 +181,11 @@ Because the filename is the metadata, the Denote naming convention doubles as a 
 
 | Prefix | Matches | Example |
 |---|---|---|
-| `_` | tag | `_rust` - notes tagged rust |
+| `_` | tag | `_rust` - notes tagged rust; `_todo` - all open todos; `_done` - all done todos |
 | `--` | title/slug | `--meeting` - notes with "meeting" in the title |
 | none | anywhere | `2026` - matches timestamp, title, or tags |
 
-Combine freely - `_rust --project 2026` finds notes from 2026 with tag rust and "project" in the title. Order does not matter.
+Combine freely - `_rust _todo 2026` finds open todos from 2026 tagged rust. Order does not matter.
 
 `<leader>nf` shows all notes immediately and filters as you type. `<leader>ns` requires at least one character before ripgrep runs - that is normal live-grep behaviour.
 
@@ -215,6 +216,19 @@ This means denim has to rewrite backlinks whenever a file is renamed (which it d
 Pressing `<CR>` or ctrl+clicking on a URL link opens it in the browser via `xdg-open` instead of trying to follow it as a note file.
 
 ## Tag Workflow
+
+Todo and done status are plain tags. The tag names default to `todo` and `done` but are fully configurable via the `workflow` option - for example GTD users might prefer `next`/`completed`:
+
+```lua
+require("denim").setup({
+  workflow = {
+    todo = "next",
+    done = "completed",
+  },
+})
+```
+
+`<leader>nxx` marks the current note as todo (adds the todo tag, or replaces done with todo if already marked done). `<leader>nxu` marks it as done (adds the done tag, or replaces todo with done). Both are no-ops if the note already has the target tag. The index and statistics views respect the configured tag names throughout.
 
 When creating a note or todo, a Telescope picker appears after entering the title. Use `<Tab>` to toggle existing tags. To add new tags, type one or more space-separated names and press `<Enter>` - the picker re-opens with all previously-selected and newly-typed tags pre-selected, so you can keep selecting or deselecting. Press `<Enter>` with an empty prompt to finalize. Press `<Esc>` at any point to cancel without creating the note.
 
@@ -247,12 +261,12 @@ Attendees: $
 
 ## 2026-05-14
 
-- [ ] [Fix login bug](20260514-O-fix-login-bug__backend.md)
+- [ ] [Fix login bug](20260514--fix-login-bug__backend_todo.md)
 - [Zettelkasten intro](20260514--zettelkasten-intro__pkm.md)
 
 ## 2026-05-13
 
-- [x] [Write tests](20260513-X-write-tests.md)
+- [x] [Write tests](20260513--write-tests__done.md)
 ```
 
 | Key | Action |
@@ -312,11 +326,8 @@ Attendees: $
 | `:DenimBacklinks` | Show backlinks to current note |
 | `:DenimPasteImage` | Paste file or image from clipboard |
 | `:DenimRefactor` | Refactor current note (rename + retag) |
-| `:DenimNewTodo` | New todo |
-| `:DenimOpenTodos` | List open todos |
-| `:DenimDoneTodos` | List done todos |
-| `:DenimTodoDone` | Mark current todo as done |
-| `:DenimTodoUndone` | Reopen a done todo |
+| `:DenimMarkTodo` | Mark current note as todo |
+| `:DenimMarkDone` | Mark current note as done |
 | `:DenimIndex` | Open notes index |
 | `:DenimStats` | Open notes statistics |
 

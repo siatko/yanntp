@@ -75,35 +75,15 @@ function M.setup(opts)
         require("denim.notes").refactor()
       end, { desc = "denim: refactor current note" })
     end
-    if keymaps.new_todo then
-      vim.keymap.set("n", keymaps.new_todo, function()
-        require("denim.notes").new_todo()
-      end, { desc = "denim: new todo" })
+    if keymaps.mark_todo then
+      vim.keymap.set("n", keymaps.mark_todo, function()
+        require("denim.notes").mark_todo()
+      end, { desc = "denim: mark current note as todo" })
     end
-    if keymaps.new_todo_from_template then
-      vim.keymap.set("n", keymaps.new_todo_from_template, function()
-        require("denim.notes").new_todo_from_template()
-      end, { desc = "denim: new todo from template" })
-    end
-    if keymaps.open_todos then
-      vim.keymap.set("n", keymaps.open_todos, function()
-        require("denim.telescope").list_open_todos()
-      end, { desc = "denim: list open todos" })
-    end
-    if keymaps.done_todos then
-      vim.keymap.set("n", keymaps.done_todos, function()
-        require("denim.telescope").list_done_todos()
-      end, { desc = "denim: list done todos" })
-    end
-    if keymaps.todo_done then
-      vim.keymap.set("n", keymaps.todo_done, function()
-        require("denim.notes").todo_done()
-      end, { desc = "denim: mark current todo as done" })
-    end
-    if keymaps.todo_undone then
-      vim.keymap.set("n", keymaps.todo_undone, function()
-        require("denim.notes").todo_undone()
-      end, { desc = "denim: reopen done todo" })
+    if keymaps.mark_done then
+      vim.keymap.set("n", keymaps.mark_done, function()
+        require("denim.notes").mark_done()
+      end, { desc = "denim: mark current note as done" })
     end
     if keymaps.open_index then
       vim.keymap.set("n", keymaps.open_index, function()
@@ -187,24 +167,12 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimPasteImage", function()
     require("denim.notes").paste_image()
   end, { desc = "Paste image from clipboard" })
-  vim.api.nvim_create_user_command("DenimNewTodo", function()
-    require("denim.notes").new_todo()
-  end, { desc = "Create a new todo" })
-  vim.api.nvim_create_user_command("DenimNewTodoFromTemplate", function()
-    require("denim.notes").new_todo_from_template()
-  end, { desc = "Create a new todo from a template" })
-  vim.api.nvim_create_user_command("DenimTodoDone", function()
-    require("denim.notes").todo_done()
-  end, { desc = "Mark current todo as done" })
-  vim.api.nvim_create_user_command("DenimTodoUndone", function()
-    require("denim.notes").todo_undone()
-  end, { desc = "Reopen a done todo" })
-  vim.api.nvim_create_user_command("DenimOpenTodos", function()
-    require("denim.telescope").list_open_todos()
-  end, { desc = "List open todos" })
-  vim.api.nvim_create_user_command("DenimDoneTodos", function()
-    require("denim.telescope").list_done_todos()
-  end, { desc = "List done todos" })
+  vim.api.nvim_create_user_command("DenimMarkTodo", function()
+    require("denim.notes").mark_todo()
+  end, { desc = "Mark current note as todo" })
+  vim.api.nvim_create_user_command("DenimMarkDone", function()
+    require("denim.notes").mark_done()
+  end, { desc = "Mark current note as done" })
   vim.api.nvim_create_user_command("DenimIndex", function()
     require("denim.index").open()
   end, { desc = "Open notes index" })
