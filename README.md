@@ -17,6 +17,7 @@
 ```
 
 ![Tests](https://github.com/siatko/denim.nvim/actions/workflows/test.yml/badge.svg)
+![Neovim](https://img.shields.io/badge/Neovim-%3E%3D%200.10-57A143?logo=neovim)
 ![License](https://img.shields.io/github/license/siatko/denim.nvim)
 
 > A [Denote](https://protesilaos.com/emacs/denote)-inspired note-taking plugin for Neovim.
