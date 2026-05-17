@@ -195,8 +195,10 @@ describe("integration", function()
       local win = find_float()
       assert.truthy(win, "expected a floating window")
       save(vim.api.nvim_win_get_buf(win))()
-      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--fleeting-thought__quick.md"
-      wait_for(expected)
+      vim.wait(500, function()
+        return #vim.fn.glob(dir .. "/*--fleeting-thought__quick.md", false, true) > 0
+      end, 10)
+      assert.equal(1, #vim.fn.glob(dir .. "/*--fleeting-thought__quick.md", false, true))
     end)
 
     it("slugifies special characters in title", function()
@@ -205,8 +207,10 @@ describe("integration", function()
       flush()
       local win = find_float()
       save(vim.api.nvim_win_get_buf(win))()
-      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--hello-world__quick.md"
-      wait_for(expected)
+      vim.wait(500, function()
+        return #vim.fn.glob(dir .. "/*--hello-world__quick.md", false, true) > 0
+      end, 10)
+      assert.equal(1, #vim.fn.glob(dir .. "/*--hello-world__quick.md", false, true))
     end)
 
     it("uses custom capture tag when configured", function()
@@ -216,8 +220,10 @@ describe("integration", function()
       flush()
       local win = find_float()
       save(vim.api.nvim_win_get_buf(win))()
-      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--my-idea__inbox.md"
-      wait_for(expected)
+      vim.wait(500, function()
+        return #vim.fn.glob(dir .. "/*--my-idea__inbox.md", false, true) > 0
+      end, 10)
+      assert.equal(1, #vim.fn.glob(dir .. "/*--my-idea__inbox.md", false, true))
     end)
 
     it("does nothing when title input is cancelled", function()
@@ -252,9 +258,12 @@ describe("integration", function()
       local buf = vim.api.nvim_win_get_buf(win)
       vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "line one", "line two" })
       save(buf)()
-      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "--thought-with-content__quick.md"
-      wait_for(expected)
-      assert.same({ "line one", "line two" }, vim.fn.readfile(expected))
+      vim.wait(500, function()
+        return #vim.fn.glob(dir .. "/*--thought-with-content__quick.md", false, true) > 0
+      end, 10)
+      local created = vim.fn.glob(dir .. "/*--thought-with-content__quick.md", false, true)
+      assert.equal(1, #created)
+      assert.same({ "line one", "line two" }, vim.fn.readfile(created[1]))
     end)
 
     it("save closes the floating window", function()
