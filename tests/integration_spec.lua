@@ -147,227 +147,249 @@ describe("integration", function()
     end)
   end)
 
-  -- ─── new_todo ────────────────────────────────────────────────────────────────
+  -- ─── mark_done ───────────────────────────────────────────────────────────────
 
-  describe("new_todo", function()
-    it("creates -O- file with correct name", function()
-      mock_input("fix the bug")
-      mock_tags({ "backend" })
-      notes.new_todo()
-      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-fix-the-bug__backend.md"
-      wait_for(expected)
-    end)
-
-    it("creates -O- file without tags", function()
-      mock_input("plain todo")
-      mock_tags({})
-      notes.new_todo()
-      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-plain-todo.md"
-      wait_for(expected)
-    end)
-
-    it("sorts tags alphabetically", function()
-      mock_input("tagged todo")
-      mock_tags({ "work", "backend", "urgent" })
-      notes.new_todo()
-      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-tagged-todo__backend_urgent_work.md"
-      wait_for(expected)
-    end)
-
-    it("opens existing todo without overwriting it", function()
-      local path = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-existing-todo.md"
-      write_file(path, { "# EXISTING TODO", "", "keep this content" })
-      mock_input("existing todo")
-      mock_tags({})
-      notes.new_todo()
-      wait_for(path)
-      assert.equal("keep this content", vim.fn.readfile(path)[3])
-    end)
-
-    it("does nothing when name input is cancelled", function()
-      mock_input(nil)
-      notes.new_todo()
-      flush()
-      assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
-    end)
-
-    it("does nothing when name input is empty string", function()
-      mock_input("")
-      notes.new_todo()
-      flush()
-      assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
-    end)
-  end)
-
-  -- ─── todo_done ───────────────────────────────────────────────────────────────
-
-  describe("todo_done", function()
-    it("renames -O- to -X-", function()
-      local path = dir .. "/20260514-O-fix-bug.md"
+  describe("mark_done", function()
+    it("renames todo tag to done tag", function()
+      local path = dir .. "/20260514--fix-bug__todo.md"
       write_file(path, { "# FIX BUG", "" })
       open_buf(path)
-      notes.todo_done()
+      notes.mark_done()
       assert.equal(0, vim.fn.filereadable(path))
-      assert.equal(1, vim.fn.filereadable(dir .. "/20260514-X-fix-bug.md"))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--fix-bug__done.md"))
     end)
 
-    it("preserves tags when marking done", function()
-      local path = dir .. "/20260514-O-tagged__work_urgent.md"
+    it("preserves other tags when marking done", function()
+      local path = dir .. "/20260514--tagged__todo_urgent_work.md"
       write_file(path, { "# TAGGED", "" })
       open_buf(path)
-      notes.todo_done()
-      assert.equal(1, vim.fn.filereadable(dir .. "/20260514-X-tagged__work_urgent.md"))
+      notes.mark_done()
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--tagged__done_urgent_work.md"))
     end)
 
-    it("does not rename a plain note", function()
-      local path = dir .. "/20260514--not-a-todo.md"
-      write_file(path, { "# NOT A TODO", "" })
+    it("adds done tag to a plain note", function()
+      local path = dir .. "/20260514--plain-note.md"
+      write_file(path, { "# PLAIN NOTE", "" })
       open_buf(path)
-      notes.todo_done()
+      notes.mark_done()
+      assert.equal(0, vim.fn.filereadable(path))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--plain-note__done.md"))
+    end)
+
+    it("adds done tag to a note with other tags", function()
+      local path = dir .. "/20260514--note__work.md"
+      write_file(path, { "# NOTE", "" })
+      open_buf(path)
+      notes.mark_done()
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--note__done_work.md"))
+    end)
+
+    it("does nothing when already done", function()
+      local path = dir .. "/20260514--done-note__done.md"
+      write_file(path, { "# DONE", "" })
+      open_buf(path)
+      notes.mark_done()
       assert.equal(1, vim.fn.filereadable(path))
     end)
 
-    it("does not rename an already done todo", function()
-      local path = dir .. "/20260514-X-done-todo.md"
-      write_file(path, { "# DONE TODO", "" })
+    it("notifies when already done", function()
+      local path = dir .. "/20260514--done-note__done.md"
+      write_file(path, { "# DONE", "" })
       open_buf(path)
-      notes.todo_done()
-      assert.equal(1, vim.fn.filereadable(path))
+      local notified = false
+      local orig = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.INFO then notified = true end end
+      notes.mark_done()
+      vim.notify = orig
+      assert.truthy(notified)
     end)
 
-    it("warns when the current file is an already-done todo", function()
-      local path = dir .. "/20260514-X-done-todo.md"
-      write_file(path, { "# DONE TODO", "" })
-      open_buf(path)
-      local warned = false
-      local orig_notify = vim.notify
-      vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
-      notes.todo_done()
-      vim.notify = orig_notify
-      assert.truthy(warned)
-    end)
-
-    it("warns when the current file is outside the notes directory", function()
-      local tmp = vim.fn.tempname() .. "-O-outside.md"
-      write_file(tmp, { "# OUTSIDE TODO", "" })
+    it("warns when outside the notes directory", function()
+      local tmp = vim.fn.tempname() .. "--outside.md"
+      write_file(tmp, { "# OUTSIDE", "" })
       open_buf(tmp)
       local warned = false
-      local orig_notify = vim.notify
+      local orig = vim.notify
       vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
-      notes.todo_done()
-      vim.notify = orig_notify
+      notes.mark_done()
+      vim.notify = orig
       assert.truthy(warned)
       assert.equal(1, vim.fn.filereadable(tmp))
       vim.fn.delete(tmp)
     end)
 
-    it("updates backlinks when marking done", function()
-      local path   = dir .. "/20260514-O-fix-bug.md"
+    it("updates backlinks when marking done (from todo)", function()
+      local path   = dir .. "/20260514--fix-bug__todo.md"
       local linker = dir .. "/20260514--linker.md"
       write_file(path,   { "# FIX BUG", "" })
-      write_file(linker, { "# LINKER", "", "see [Fix Bug](20260514-O-fix-bug.md)" })
+      write_file(linker, { "# LINKER", "", "see [Fix Bug](20260514--fix-bug__todo.md)" })
       open_buf(path)
-      notes.todo_done()
+      notes.mark_done()
       local line = vim.fn.readfile(linker)[3]
-      assert.truthy(line:find("20260514-X-fix-bug.md", 1, true))
-      assert.falsy(line:find("20260514-O-fix-bug.md", 1, true))
+      assert.truthy(line:find("20260514--fix-bug__done.md", 1, true))
+      assert.falsy(line:find("20260514--fix-bug__todo.md", 1, true))
     end)
 
-    it("closes the old buffer after marking done", function()
-      local path = dir .. "/20260514-O-close-me.md"
+    it("updates backlinks when marking done (from plain note)", function()
+      local path   = dir .. "/20260514--fix-bug.md"
+      local linker = dir .. "/20260514--linker.md"
+      write_file(path,   { "# FIX BUG", "" })
+      write_file(linker, { "# LINKER", "", "see [Fix Bug](20260514--fix-bug.md)" })
+      open_buf(path)
+      notes.mark_done()
+      local line = vim.fn.readfile(linker)[3]
+      assert.truthy(line:find("20260514--fix-bug__done.md", 1, true))
+      assert.falsy(line:find("20260514--fix-bug.md)", 1, true))
+    end)
+
+    it("closes the old buffer", function()
+      local path = dir .. "/20260514--close-me__todo.md"
       write_file(path, { "# CLOSE ME", "" })
       open_buf(path)
       local old_buf = vim.api.nvim_get_current_buf()
-      notes.todo_done()
+      notes.mark_done()
       assert.falsy(vim.api.nvim_buf_is_valid(old_buf))
     end)
 
     it("opens the done file in the current window", function()
-      local path = dir .. "/20260514-O-open-done.md"
+      local path = dir .. "/20260514--open-done__todo.md"
       write_file(path, { "# OPEN DONE", "" })
       open_buf(path)
-      notes.todo_done()
-      assert.equal(dir .. "/20260514-X-open-done.md", vim.fn.expand("%:p"))
+      notes.mark_done()
+      assert.equal(dir .. "/20260514--open-done__done.md", vim.fn.expand("%:p"))
+    end)
+
+    it("uses custom workflow tags", function()
+      config.setup({ notes_dir = dir, workflow = { todo = "next", done = "completed" } })
+      local path = dir .. "/20260514--fix-bug__next.md"
+      write_file(path, { "# FIX BUG", "" })
+      open_buf(path)
+      notes.mark_done()
+      assert.equal(0, vim.fn.filereadable(path))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--fix-bug__completed.md"))
     end)
   end)
 
-  -- ─── todo_undone ─────────────────────────────────────────────────────────────
+  -- ─── mark_todo ───────────────────────────────────────────────────────────────
 
-  describe("todo_undone", function()
-    it("renames -X- to -O-", function()
-      local path = dir .. "/20260514-X-fix-bug.md"
+  describe("mark_todo", function()
+    it("renames done tag to todo tag", function()
+      local path = dir .. "/20260514--fix-bug__done.md"
       write_file(path, { "# FIX BUG", "" })
       open_buf(path)
-      notes.todo_undone()
+      notes.mark_todo()
       assert.equal(0, vim.fn.filereadable(path))
-      assert.equal(1, vim.fn.filereadable(dir .. "/20260514-O-fix-bug.md"))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--fix-bug__todo.md"))
     end)
 
-    it("preserves tags when reopening", function()
-      local path = dir .. "/20260514-X-tagged__work_urgent.md"
+    it("preserves other tags when marking as todo", function()
+      local path = dir .. "/20260514--tagged__done_urgent_work.md"
       write_file(path, { "# TAGGED", "" })
       open_buf(path)
-      notes.todo_undone()
-      assert.equal(1, vim.fn.filereadable(dir .. "/20260514-O-tagged__work_urgent.md"))
+      notes.mark_todo()
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--tagged__todo_urgent_work.md"))
     end)
 
-    it("does not rename a plain note", function()
-      local path = dir .. "/20260514--not-a-todo.md"
-      write_file(path, { "# NOT A TODO", "" })
+    it("adds todo tag to a plain note", function()
+      local path = dir .. "/20260514--plain-note.md"
+      write_file(path, { "# PLAIN NOTE", "" })
       open_buf(path)
-      notes.todo_undone()
-      assert.equal(1, vim.fn.filereadable(path))
+      notes.mark_todo()
+      assert.equal(0, vim.fn.filereadable(path))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--plain-note__todo.md"))
     end)
 
-    it("does not rename an open todo", function()
-      local path = dir .. "/20260514-O-open-todo.md"
+    it("adds todo tag to a note with other tags", function()
+      local path = dir .. "/20260514--note__work.md"
+      write_file(path, { "# NOTE", "" })
+      open_buf(path)
+      notes.mark_todo()
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--note__todo_work.md"))
+    end)
+
+    it("does nothing when already a todo", function()
+      local path = dir .. "/20260514--open-todo__todo.md"
       write_file(path, { "# OPEN TODO", "" })
       open_buf(path)
-      notes.todo_undone()
+      notes.mark_todo()
       assert.equal(1, vim.fn.filereadable(path))
     end)
 
-    it("warns when the current file is outside the notes directory", function()
-      local tmp = vim.fn.tempname() .. "-X-outside.md"
-      write_file(tmp, { "# OUTSIDE TODO", "" })
+    it("notifies when already a todo", function()
+      local path = dir .. "/20260514--open-todo__todo.md"
+      write_file(path, { "# OPEN TODO", "" })
+      open_buf(path)
+      local notified = false
+      local orig = vim.notify
+      vim.notify = function(_, level) if level == vim.log.levels.INFO then notified = true end end
+      notes.mark_todo()
+      vim.notify = orig
+      assert.truthy(notified)
+    end)
+
+    it("warns when outside the notes directory", function()
+      local tmp = vim.fn.tempname() .. "--outside.md"
+      write_file(tmp, { "# OUTSIDE", "" })
       open_buf(tmp)
       local warned = false
-      local orig_notify = vim.notify
+      local orig = vim.notify
       vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
-      notes.todo_undone()
-      vim.notify = orig_notify
+      notes.mark_todo()
+      vim.notify = orig
       assert.truthy(warned)
       assert.equal(1, vim.fn.filereadable(tmp))
       vim.fn.delete(tmp)
     end)
 
-    it("updates backlinks when reopening", function()
-      local path   = dir .. "/20260514-X-fix-bug.md"
+    it("updates backlinks when marking as todo (from done)", function()
+      local path   = dir .. "/20260514--fix-bug__done.md"
       local linker = dir .. "/20260514--linker.md"
       write_file(path,   { "# FIX BUG", "" })
-      write_file(linker, { "# LINKER", "", "see [Fix Bug](20260514-X-fix-bug.md)" })
+      write_file(linker, { "# LINKER", "", "see [Fix Bug](20260514--fix-bug__done.md)" })
       open_buf(path)
-      notes.todo_undone()
+      notes.mark_todo()
       local line = vim.fn.readfile(linker)[3]
-      assert.truthy(line:find("20260514-O-fix-bug.md", 1, true))
-      assert.falsy(line:find("20260514-X-fix-bug.md", 1, true))
+      assert.truthy(line:find("20260514--fix-bug__todo.md", 1, true))
+      assert.falsy(line:find("20260514--fix-bug__done.md", 1, true))
     end)
 
-    it("closes the old buffer after reopening", function()
-      local path = dir .. "/20260514-X-close-me.md"
+    it("updates backlinks when marking as todo (from plain note)", function()
+      local path   = dir .. "/20260514--fix-bug.md"
+      local linker = dir .. "/20260514--linker.md"
+      write_file(path,   { "# FIX BUG", "" })
+      write_file(linker, { "# LINKER", "", "see [Fix Bug](20260514--fix-bug.md)" })
+      open_buf(path)
+      notes.mark_todo()
+      local line = vim.fn.readfile(linker)[3]
+      assert.truthy(line:find("20260514--fix-bug__todo.md", 1, true))
+      assert.falsy(line:find("20260514--fix-bug.md)", 1, true))
+    end)
+
+    it("closes the old buffer", function()
+      local path = dir .. "/20260514--close-me__done.md"
       write_file(path, { "# CLOSE ME", "" })
       open_buf(path)
       local old_buf = vim.api.nvim_get_current_buf()
-      notes.todo_undone()
+      notes.mark_todo()
       assert.falsy(vim.api.nvim_buf_is_valid(old_buf))
     end)
 
-    it("opens the reopened file in the current window", function()
-      local path = dir .. "/20260514-X-open-me.md"
+    it("opens the todo file in the current window", function()
+      local path = dir .. "/20260514--open-me__done.md"
       write_file(path, { "# OPEN ME", "" })
       open_buf(path)
-      notes.todo_undone()
-      assert.equal(dir .. "/20260514-O-open-me.md", vim.fn.expand("%:p"))
+      notes.mark_todo()
+      assert.equal(dir .. "/20260514--open-me__todo.md", vim.fn.expand("%:p"))
+    end)
+
+    it("uses custom workflow tags", function()
+      config.setup({ notes_dir = dir, workflow = { todo = "next", done = "completed" } })
+      local path = dir .. "/20260514--fix-bug__completed.md"
+      write_file(path, { "# FIX BUG", "" })
+      open_buf(path)
+      notes.mark_todo()
+      assert.equal(0, vim.fn.filereadable(path))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--fix-bug__next.md"))
     end)
   end)
 
@@ -607,27 +629,27 @@ describe("integration", function()
       assert.equal(1, vim.fn.filereadable(orig))
     end)
 
-    it("works on an open todo file", function()
-      local orig = dir .. "/20260514-O-old-todo.md"
+    it("works on a todo-tagged file", function()
+      local orig = dir .. "/20260514--old-todo__todo.md"
       write_file(orig, { "# OLD TODO", "" })
       open_buf(orig)
       mock_input("new todo")
-      mock_tags({})
+      mock_tags({ "todo" })
       notes.refactor()
-      local new = dir .. "/20260514-O-new-todo.md"
+      local new = dir .. "/20260514--new-todo__todo.md"
       wait_for(new)
       assert.equal(0, vim.fn.filereadable(orig))
       assert.equal(1, vim.fn.filereadable(new))
     end)
 
-    it("works on a done todo file", function()
-      local orig = dir .. "/20260514-X-old-done.md"
+    it("works on a done-tagged file", function()
+      local orig = dir .. "/20260514--old-done__done.md"
       write_file(orig, { "# OLD DONE", "" })
       open_buf(orig)
       mock_input("new done")
-      mock_tags({})
+      mock_tags({ "done" })
       notes.refactor()
-      local new = dir .. "/20260514-X-new-done.md"
+      local new = dir .. "/20260514--new-done__done.md"
       wait_for(new)
       assert.equal(0, vim.fn.filereadable(orig))
       assert.equal(1, vim.fn.filereadable(new))
@@ -839,7 +861,7 @@ describe("integration", function()
     end)
 
     it("uses $FILE_NAME template when pasting image from a todo buffer", function()
-      local todo_path = dir .. "/20260101T000000-O-my-todo.md"
+      local todo_path = dir .. "/20260101T000000--my-todo__todo.md"
       write_file(todo_path, {})
       open_buf(todo_path)
       local captured
@@ -1225,48 +1247,6 @@ describe("integration", function()
     end)
   end)
 
-  describe("list_open_todos", function()
-    local saved_builtin
-    before_each(function()
-      saved_builtin = package.loaded["telescope.builtin"]
-      package.loaded["telescope.builtin"] = { find_files = function() end }
-    end)
-    after_each(function()
-      package.loaded["telescope.builtin"] = saved_builtin
-    end)
-
-    it("opens a picker filtered to open todos", function()
-      local called_with
-      package.loaded["telescope.builtin"].find_files = function(opts) called_with = opts end
-      tel.list_open_todos()
-      assert.truthy(called_with, "find_files should be called")
-      assert.equal("Open Todos", called_with.prompt_title)
-      local cmd = table.concat(called_with.find_command, " ")
-      assert.truthy(cmd:find("-O-"), "find_command should filter open todos")
-    end)
-  end)
-
-  describe("list_done_todos", function()
-    local saved_builtin
-    before_each(function()
-      saved_builtin = package.loaded["telescope.builtin"]
-      package.loaded["telescope.builtin"] = { find_files = function() end }
-    end)
-    after_each(function()
-      package.loaded["telescope.builtin"] = saved_builtin
-    end)
-
-    it("opens a picker filtered to done todos", function()
-      local called_with
-      package.loaded["telescope.builtin"].find_files = function(opts) called_with = opts end
-      tel.list_done_todos()
-      assert.truthy(called_with, "find_files should be called")
-      assert.equal("Done Todos", called_with.prompt_title)
-      local cmd = table.concat(called_with.find_command, " ")
-      assert.truthy(cmd:find("-X-"), "find_command should filter done todos")
-    end)
-  end)
-
   -- ─── pick_template ───────────────────────────────────────────────────────────
 
   describe("pick_template", function()
@@ -1390,196 +1370,6 @@ describe("integration", function()
       notes.new_note_from_template()
       wait_for(existing)
       assert.equal("original content", vim.fn.readfile(existing)[3])
-    end)
-  end)
-
-  -- ─── new_todo_from_template ───────────────────────────────────────────────────
-
-  describe("new_todo_from_template", function()
-    local saved = {}
-    local telescope_modules = {
-      "telescope.pickers", "telescope.finders",
-      "telescope.config", "telescope.actions", "telescope.actions.state",
-    }
-
-    before_each(function()
-      for _, mod in ipairs(telescope_modules) do saved[mod] = package.loaded[mod] end
-    end)
-
-    after_each(function()
-      for _, mod in ipairs(telescope_modules) do package.loaded[mod] = saved[mod] end
-    end)
-
-    it("notifies when no templates exist", function()
-      local notified = false
-      local orig_notify = vim.notify
-      vim.notify = function(msg, _) if msg:find("no templates") then notified = true end end
-      tel.pick_template(function() end)
-      vim.notify = orig_notify
-      assert.truthy(notified)
-    end)
-
-    it("creates -O- file with template content", function()
-      local tmpl = make_template("task", { "## Steps", "", "## Notes" })
-      mock_template(tmpl)
-      mock_input("my task")
-      mock_tags({})
-      notes.new_todo_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-my-task.md"
-      wait_for(expected)
-      local lines = vim.fn.readfile(expected)
-      assert.equal("## Steps", lines[1])
-      assert.equal("## Notes", lines[3])
-    end)
-
-    it("uses -O- marker in the filename", function()
-      local tmpl = make_template("task", { "content" })
-      mock_template(tmpl)
-      mock_input("check marker")
-      mock_tags({})
-      notes.new_todo_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-check-marker.md"
-      wait_for(expected)
-      assert.equal(1, vim.fn.filereadable(expected))
-    end)
-
-    it("uses template content as-is including any H1 heading", function()
-      local tmpl = make_template("task", { "# Task Template", "", "## Steps" })
-      mock_template(tmpl)
-      mock_input("my task")
-      mock_tags({})
-      notes.new_todo_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-my-task.md"
-      wait_for(expected)
-      local lines = vim.fn.readfile(expected)
-      assert.equal("# Task Template", lines[1])
-      assert.equal("## Steps", lines[3])
-    end)
-
-    it("applies tags to the filename", function()
-      local tmpl = make_template("task", { "content" })
-      mock_template(tmpl)
-      mock_input("my task")
-      mock_tags({ "work", "alpha" })
-      notes.new_todo_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-my-task__alpha_work.md"
-      wait_for(expected)
-    end)
-
-    it("sorts tags alphabetically in the filename", function()
-      local tmpl = make_template("task", { "content" })
-      mock_template(tmpl)
-      mock_input("sorted")
-      mock_tags({ "zebra", "alpha", "mango" })
-      notes.new_todo_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-sorted__alpha_mango_zebra.md"
-      wait_for(expected)
-    end)
-
-    it("does nothing when name input is cancelled", function()
-      local tmpl = make_template("task", { "content" })
-      mock_template(tmpl)
-      mock_input(nil)
-      notes.new_todo_from_template()
-      flush()
-      assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
-    end)
-
-    it("does nothing when name input is empty string", function()
-      local tmpl = make_template("task", { "content" })
-      mock_template(tmpl)
-      mock_input("")
-      notes.new_todo_from_template()
-      flush()
-      assert.same({}, vim.fn.glob(dir .. "/*.md", false, true))
-    end)
-
-    it("opens existing todo without overwriting when name collides", function()
-      local existing = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-collision.md"
-      write_file(existing, { "original content" })
-      local tmpl = make_template("task", { "template content" })
-      mock_template(tmpl)
-      mock_input("collision")
-      mock_tags({})
-      notes.new_todo_from_template()
-      wait_for(existing)
-      assert.equal("original content", vim.fn.readfile(existing)[1])
-    end)
-
-    it("notifies when opening a colliding existing todo", function()
-      local existing = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-collision.md"
-      write_file(existing, { "original content" })
-      local tmpl = make_template("task", { "template content" })
-      mock_template(tmpl)
-      mock_input("collision")
-      mock_tags({})
-      local notified = false
-      local orig_notify = vim.notify
-      vim.notify = function(msg, _) if msg:find("already exists") then notified = true end end
-      notes.new_todo_from_template()
-      flush()
-      vim.notify = orig_notify
-      assert.truthy(notified)
-    end)
-
-    it("places cursor at the first $ and removes it from the buffer", function()
-      local tmpl = make_template("task", { "## Topic: $", "", "## Steps" })
-      mock_template(tmpl)
-      mock_input("my task")
-      mock_tags({})
-      notes.new_todo_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-my-task.md"
-      wait_for(expected)
-      flush()
-      local cursor = vim.api.nvim_win_get_cursor(0)
-      assert.equal(1, cursor[1])
-      assert.equal(10, cursor[2])
-      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      assert.equal("## Topic: ", lines[1])
-    end)
-
-    it("Tab advances cursor to the next stop", function()
-      local tmpl = make_template("task", { "Name: $", "Due: $" })
-      mock_template(tmpl)
-      mock_input("advance")
-      mock_tags({})
-      notes.new_todo_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-advance.md"
-      wait_for(expected)
-      flush()
-      local bufnr = vim.api.nvim_get_current_buf()
-      local tab_fn
-      for _, km in ipairs(vim.api.nvim_buf_get_keymap(bufnr, "i")) do
-        if km.lhs == "<Tab>" then tab_fn = km.callback; break end
-      end
-      assert.truthy(tab_fn, "Tab keymap not set")
-      tab_fn()
-      local cursor = vim.api.nvim_win_get_cursor(0)
-      assert.equal(2, cursor[1])
-      assert.equal(5, cursor[2])
-      local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      assert.equal("Name: ", lines[1])
-      assert.equal("Due: ", lines[2])
-    end)
-
-    it("falls back to line 1 col 0 and sets no Tab keymap when template has no stops", function()
-      local tmpl = make_template("plain-task", { "Just plain content" })
-      mock_template(tmpl)
-      mock_input("no stops")
-      mock_tags({})
-      notes.new_todo_from_template()
-      local expected = dir .. "/" .. os.date("%Y%m%dT%H%M%S") .. "-O-no-stops.md"
-      wait_for(expected)
-      flush()
-      local cursor = vim.api.nvim_win_get_cursor(0)
-      assert.equal(1, cursor[1])
-      assert.equal(0, cursor[2])
-      local bufnr = vim.api.nvim_get_current_buf()
-      local has_tab = false
-      for _, km in ipairs(vim.api.nvim_buf_get_keymap(bufnr, "i")) do
-        if km.lhs == "<Tab>" then has_tab = true; break end
-      end
-      assert.falsy(has_tab)
     end)
   end)
 
@@ -1753,17 +1543,17 @@ describe("integration", function()
     end)
 
     it("shows open todos with unchecked checkbox", function()
-      write_file(dir .. "/20260514-O-fix-bug.md", { "# FIX BUG", "" })
+      write_file(dir .. "/20260514--fix-bug__todo.md", { "# FIX BUG", "" })
       idx.open()
       local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      assert.truthy(vim.tbl_contains(lines, "- [ ] [FIX BUG](20260514-O-fix-bug.md)"))
+      assert.truthy(vim.tbl_contains(lines, "- [ ] [FIX BUG](20260514--fix-bug__todo.md)"))
     end)
 
     it("shows done todos with checked checkbox", function()
-      write_file(dir .. "/20260514-X-done-task.md", { "# DONE TASK", "" })
+      write_file(dir .. "/20260514--done-task__done.md", { "# DONE TASK", "" })
       idx.open()
       local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-      assert.truthy(vim.tbl_contains(lines, "- [x] [DONE TASK](20260514-X-done-task.md)"))
+      assert.truthy(vim.tbl_contains(lines, "- [x] [DONE TASK](20260514--done-task__done.md)"))
     end)
 
     it("reuses the same buffer on repeated open calls", function()
@@ -1845,10 +1635,10 @@ describe("integration", function()
     end)
 
     it("counts notes, open todos and done todos correctly", function()
-      write_file(dir .. "/20260514--note-a.md",  { "# A", "" })
-      write_file(dir .. "/20260514--note-b.md",  { "# B", "" })
-      write_file(dir .. "/20260514-O-todo.md",   { "# TODO", "" })
-      write_file(dir .. "/20260514-X-done.md",   { "# DONE", "" })
+      write_file(dir .. "/20260514--note-a.md",        { "# A", "" })
+      write_file(dir .. "/20260514--note-b.md",        { "# B", "" })
+      write_file(dir .. "/20260514--my-task__todo.md", { "# TODO", "" })
+      write_file(dir .. "/20260514--my-task__done.md", { "# DONE", "" })
       st.open()
       local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
       assert.equal(4, stat_value(lines, "Total"))
@@ -2348,8 +2138,8 @@ describe("integration", function()
       assert.falsy(vim.api.nvim_buf_is_valid(old_buf))
     end)
 
-    it("works on todo files", function()
-      local todo = dir .. "/20260514-O-fix-bug__foo_work.md"
+    it("works on todo-tagged files", function()
+      local todo = dir .. "/20260514--fix-bug__foo_todo_work.md"
       write_file(todo, { "# FIX BUG", "" })
       local h = setup_mock("foo")
       mock_input("ops")
@@ -2357,7 +2147,7 @@ describe("integration", function()
       h.enter()
       flush()
       assert.equal(0, vim.fn.filereadable(todo))
-      assert.equal(1, vim.fn.filereadable(dir .. "/20260514-O-fix-bug__ops_work.md"))
+      assert.equal(1, vim.fn.filereadable(dir .. "/20260514--fix-bug__ops_todo_work.md"))
     end)
   end)
 

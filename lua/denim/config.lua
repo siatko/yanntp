@@ -2,6 +2,10 @@ local M = {}
 
 M.defaults = {
   notes_dir = "~/notes",
+  workflow = {
+    todo = "todo",
+    done = "done",
+  },
   keymaps = {
     new_note          = "<leader>nn",
     search_notes      = "<leader>nf",
@@ -17,12 +21,8 @@ M.defaults = {
     search_tags       = "<leader>ngs",
     search_untagged   = "<leader>ngu",
     rename_tag        = "<leader>ngr",
-    new_todo          = "<leader>nxn",
-    new_todo_from_template = "<leader>nxt",
-    open_todos        = "<leader>nxo",
-    done_todos        = "<leader>nxd",
-    todo_done         = "<leader>nxx",
-    todo_undone       = "<leader>nxu",
+    mark_todo         = "<leader>nxx",
+    mark_done         = "<leader>nxu",
     open_index        = "<leader>nvi",
     open_stats        = "<leader>nvs",
   },

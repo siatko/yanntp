@@ -1,5 +1,7 @@
 local M = {}
 
+local utils = require("denim.utils")
+
 local function get_opts()
   return require("denim.config").options
 end
@@ -22,13 +24,17 @@ local function gather_stats(notes_dir)
     tags = {}, linked = 0,
   }
 
+  local workflow = get_opts().workflow
   for _, filepath in ipairs(all) do
     local filename = vim.fn.fnamemodify(filepath, ":t")
     local date_raw = filename:match("^(%d%d%d%d%d%d%d%d)")
     if date_raw then
-      if filename:match("^%d+T?%d*%-O%-") then
+      local tags = utils.tags_from_filename(filename)
+      local tag_set = {}
+      for _, t in ipairs(tags) do tag_set[t] = true end
+      if tag_set[workflow.todo] then
         stats.open_todos = stats.open_todos + 1
-      elseif filename:match("^%d+T?%d*%-X%-") then
+      elseif tag_set[workflow.done] then
         stats.done_todos = stats.done_todos + 1
       else
         stats.notes = stats.notes + 1
