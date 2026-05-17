@@ -333,18 +333,15 @@ local image_exts = {
   svg = true, bmp = true, tiff = true, tif = true, ico = true, avif = true,
 }
 
+-- Returns path, true on success; nil, true if it's a file URI but invalid; nil, false if not a file URI
 local function parse_file_uri(clip)
   local stripped = clip:gsub("%s+$", "")
-  if not stripped:match("^file://") then return nil end
-  -- reject multiple URIs
-  if stripped:match("[\r\n]") then
-    vim.notify("denim: only a single file can be pasted at a time", vim.log.levels.WARN)
-    return nil
-  end
+  if not stripped:match("^file://") then return nil, false end
+  if stripped:match("[\r\n]") then return nil, true end
   local path = stripped:gsub("^file://", ""):gsub("%%(%x%x)", function(h)
     return string.char(tonumber(h, 16))
   end)
-  return path
+  return path, true
 end
 
 local function paste_name_tags_then(prompt, cb)
@@ -370,7 +367,11 @@ function M.paste_image()
   local opts = get_opts()
   vim.fn.mkdir(opts.notes_dir, "p")
 
-  local src = parse_file_uri(vim.fn.getreg("+"))
+  local src, is_file_uri = parse_file_uri(vim.fn.getreg("+"))
+  if is_file_uri and not src then
+    vim.notify("denim: only a single file can be pasted at a time", vim.log.levels.WARN)
+    return
+  end
   if src then
     if vim.fn.filereadable(src) == 0 then
       vim.notify("denim: file not readable: " .. src, vim.log.levels.ERROR)

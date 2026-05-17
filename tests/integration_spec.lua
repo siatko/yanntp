@@ -935,13 +935,16 @@ describe("integration", function()
       write_file(src2, { "" })
       vim.fn.setreg("+", "file://" .. src1 .. "\r\nfile://" .. src2 .. "\r\n")
       local warned = false
+      local input_shown = false
       local orig_notify = vim.notify
       vim.notify = function(_, level) if level == vim.log.levels.WARN then warned = true end end
+      vim.ui.input = function(_, _) input_shown = true end
       notes.paste_image()
       vim.notify = orig_notify
       local files = vim.fn.glob(dir .. "/*.pdf", false, true)
       assert.equals(0, #files, "expected no files copied")
-      assert.truthy(warned)
+      assert.truthy(warned, "expected a warning notification")
+      assert.falsy(input_shown, "title prompt must not appear after warning")
       vim.fn.delete(src1)
       vim.fn.delete(src2)
     end)
