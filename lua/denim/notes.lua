@@ -446,7 +446,7 @@ function M.capture()
       })
 
       if #tmpl_lines > 0 then
-        activate_tab_stops(buf)
+        vim.schedule(function() activate_tab_stops(buf) end)
       else
         vim.api.nvim_win_set_cursor(win, { 1, 0 })
         vim.cmd("startinsert")
