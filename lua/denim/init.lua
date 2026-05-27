@@ -80,6 +80,11 @@ function M.setup(opts)
         require("denim.notes").refactor()
       end, { desc = "denim: refactor current note" })
     end
+    if keymaps.delete_notes then
+      vim.keymap.set("n", keymaps.delete_notes, function()
+        require("denim.telescope").delete_notes()
+      end, { desc = "denim: delete notes" })
+    end
     if keymaps.cycle_workflow then
       vim.keymap.set("n", keymaps.cycle_workflow, function()
         require("denim.notes").cycle_workflow()
@@ -172,6 +177,9 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("DenimCycle", function()
     require("denim.notes").cycle_workflow()
   end, { desc = "Cycle workflow state: none → todo → done → none" })
+  vim.api.nvim_create_user_command("DenimDelete", function()
+    require("denim.telescope").delete_notes()
+  end, { desc = "Delete notes (multiselect picker with confirmation)" })
   vim.api.nvim_create_user_command("DenimIndex", function()
     require("denim.index").open()
   end, { desc = "Open notes index" })

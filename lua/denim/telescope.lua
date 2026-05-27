@@ -541,6 +541,80 @@ function M.rename_tag()
   }):find()
 end
 
+function M.delete_notes()
+  local notes_dir = get_opts().notes_dir
+  local files = all_note_files(notes_dir)
+
+  if #files == 0 then
+    vim.notify("denim: no notes found", vim.log.levels.INFO)
+    return
+  end
+
+  local pickers      = require("telescope.pickers")
+  local finders      = require("telescope.finders")
+  local conf         = require("telescope.config").values
+  local actions      = require("telescope.actions")
+  local action_state = require("telescope.actions.state")
+
+  pickers.new({}, {
+    prompt_title = "Delete Notes  (<Tab> multi-select, <Enter> confirm)",
+    finder = finders.new_table({
+      results = files,
+      entry_maker = function(entry)
+        return {
+          value   = entry,
+          display = vim.fn.fnamemodify(entry, ":~:."),
+          ordinal = entry,
+          path    = entry,
+        }
+      end,
+    }),
+    sorter    = conf.generic_sorter({}),
+    previewer = conf.file_previewer({}),
+    attach_mappings = function(prompt_bufnr)
+      actions.select_default:replace(function()
+        local picker = action_state.get_current_picker(prompt_bufnr)
+        local multi  = picker:get_multi_selection()
+        local to_delete
+        if #multi > 0 then
+          to_delete = vim.tbl_map(function(e) return e.value end, multi)
+        else
+          local entry = action_state.get_selected_entry()
+          if not entry then return end
+          to_delete = { entry.value }
+        end
+        actions.close(prompt_bufnr)
+        vim.schedule(function()
+          local names = vim.tbl_map(function(p) return vim.fn.fnamemodify(p, ":t") end, to_delete)
+          local msg = #to_delete == 1
+            and ("Delete 1 note: " .. names[1])
+            or  ("Delete " .. #to_delete .. " notes: " .. table.concat(names, ", "))
+          vim.ui.select({ "Yes", "No" }, { prompt = msg .. "?" }, function(choice)
+            if choice ~= "Yes" then return end
+            local deleted = 0
+            for _, filepath in ipairs(to_delete) do
+              local bufnr = vim.fn.bufnr(filepath)
+              if bufnr ~= -1 then
+                vim.api.nvim_buf_delete(bufnr, { force = true })
+              end
+              if vim.fn.delete(filepath) == 0 then
+                deleted = deleted + 1
+              else
+                vim.notify("denim: failed to delete " .. vim.fn.fnamemodify(filepath, ":t"), vim.log.levels.ERROR)
+              end
+            end
+            vim.notify(
+              string.format("denim: deleted %d note%s", deleted, deleted == 1 and "" or "s"),
+              vim.log.levels.INFO
+            )
+          end)
+        end)
+      end)
+      return true
+    end,
+  }):find()
+end
+
 function M.search_untagged()
   local notes_dir = get_opts().notes_dir
   local files = {}
