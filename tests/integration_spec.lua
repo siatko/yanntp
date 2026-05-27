@@ -3148,4 +3148,374 @@ describe("integration", function()
       h.cleanup()
     end)
   end)
+
+  -- ─── delete_notes ────────────────────────────────────────────────────────────
+
+  describe("delete_notes", function()
+    local saved = {}
+    local telescope_modules = {
+      "telescope.pickers", "telescope.finders",
+      "telescope.config", "telescope.actions", "telescope.actions.state",
+    }
+    local orig_ui_select
+
+    before_each(function()
+      for _, mod in ipairs(telescope_modules) do
+        saved[mod] = package.loaded[mod]
+      end
+      orig_ui_select = vim.ui.select
+    end)
+
+    after_each(function()
+      for _, mod in ipairs(telescope_modules) do
+        package.loaded[mod] = saved[mod]
+      end
+      vim.ui.select = orig_ui_select
+    end)
+
+    local function mock_confirm(choice)
+      vim.ui.select = function(_, _, cb) cb(choice) end
+    end
+
+    -- multi: list of {value=path} entries (simulates <Tab> multiselect)
+    -- single: path string (simulates cursor-hovered entry when no multiselect)
+    local function setup_mock(multi, single)
+      local handles = {}
+      local enter_fn
+      package.loaded["telescope.actions"] = {
+        select_default = { replace = function(_, fn) enter_fn = fn end },
+        close          = function() end,
+      }
+      package.loaded["telescope.actions.state"] = {
+        get_current_picker = function()
+          return {
+            get_multi_selection = function() return multi or {} end,
+          }
+        end,
+        get_selected_entry = function()
+          return single and { value = single } or nil
+        end,
+      }
+      package.loaded["telescope.pickers"] = {
+        new = function(_, picker_opts)
+          return {
+            find = function()
+              picker_opts.attach_mappings(1, function() end)
+            end,
+          }
+        end,
+      }
+      package.loaded["telescope.finders"] = {
+        new_table = function(o)
+          handles.finder_results = o.results
+          return {}
+        end,
+      }
+      package.loaded["telescope.config"] = {
+        values = {
+          generic_sorter = function() return {} end,
+          file_previewer = function() return {} end,
+        },
+      }
+      handles.enter = function() enter_fn() end
+      return handles
+    end
+
+    it("notifies when no notes exist", function()
+      local notified = false
+      local orig_notify = vim.notify
+      vim.notify = function(msg, _) if msg:find("no notes") then notified = true end end
+      tel.delete_notes()
+      vim.notify = orig_notify
+      assert.truthy(notified)
+    end)
+
+    it("opens a picker listing all note files", function()
+      local a = dir .. "/20260514--note-a.md"
+      local b = dir .. "/20260514--note-b__tag.md"
+      write_file(a, { "# A" })
+      write_file(b, { "# B" })
+      local h = setup_mock({}, a)
+      mock_confirm("No")
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.truthy(h.finder_results, "finder should receive file list")
+      assert.equal(2, #h.finder_results)
+      local paths = {}
+      for _, p in ipairs(h.finder_results) do paths[p] = true end
+      assert.truthy(paths[a])
+      assert.truthy(paths[b])
+    end)
+
+    it("excludes templates from the picker", function()
+      local note = dir .. "/20260514--note.md"
+      write_file(note, { "# NOTE" })
+      make_template("quick", { "content" })
+      local h = setup_mock({}, note)
+      mock_confirm("No")
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.equal(1, #h.finder_results)
+      assert.equal(note, h.finder_results[1])
+    end)
+
+    it("deletes the single selected note on confirm", function()
+      local path = dir .. "/20260514--to-delete.md"
+      write_file(path, { "# DELETE ME" })
+      local h = setup_mock({}, path)
+      mock_confirm("Yes")
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.equal(0, vim.fn.filereadable(path))
+    end)
+
+    it("deletes all multi-selected notes on confirm", function()
+      local a = dir .. "/20260514--note-a.md"
+      local b = dir .. "/20260514--note-b.md"
+      local c = dir .. "/20260514--note-c.md"
+      write_file(a, { "# A" })
+      write_file(b, { "# B" })
+      write_file(c, { "# C" })
+      local multi = { { value = a }, { value = b }, { value = c } }
+      local h = setup_mock(multi, nil)
+      mock_confirm("Yes")
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.equal(0, vim.fn.filereadable(a))
+      assert.equal(0, vim.fn.filereadable(b))
+      assert.equal(0, vim.fn.filereadable(c))
+    end)
+
+    it("does not delete when user selects No", function()
+      local path = dir .. "/20260514--keep-me.md"
+      write_file(path, { "# KEEP ME" })
+      local h = setup_mock({}, path)
+      mock_confirm("No")
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.equal(1, vim.fn.filereadable(path))
+    end)
+
+    it("does not delete when confirm dialog is cancelled (nil)", function()
+      local path = dir .. "/20260514--keep-me.md"
+      write_file(path, { "# KEEP ME" })
+      local h = setup_mock({}, path)
+      mock_confirm(nil)
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.equal(1, vim.fn.filereadable(path))
+    end)
+
+    it("closes the open buffer when the file is deleted", function()
+      local path = dir .. "/20260514--buffered.md"
+      write_file(path, { "# BUFFERED" })
+      open_buf(path)
+      local bufnr = vim.api.nvim_get_current_buf()
+      local h = setup_mock({}, path)
+      mock_confirm("Yes")
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.falsy(vim.api.nvim_buf_is_valid(bufnr))
+    end)
+
+    it("closes all open buffers for multi-selected deleted files", function()
+      local a = dir .. "/20260514--buf-a.md"
+      local b = dir .. "/20260514--buf-b.md"
+      write_file(a, { "# A" })
+      write_file(b, { "# B" })
+      open_buf(a)
+      local buf_a = vim.api.nvim_get_current_buf()
+      open_buf(b)
+      local buf_b = vim.api.nvim_get_current_buf()
+      local multi = { { value = a }, { value = b } }
+      local h = setup_mock(multi, nil)
+      mock_confirm("Yes")
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.falsy(vim.api.nvim_buf_is_valid(buf_a))
+      assert.falsy(vim.api.nvim_buf_is_valid(buf_b))
+    end)
+
+    it("does not close buffers of non-deleted files when cancelled", function()
+      local path = dir .. "/20260514--safe.md"
+      write_file(path, { "# SAFE" })
+      open_buf(path)
+      local bufnr = vim.api.nvim_get_current_buf()
+      local h = setup_mock({}, path)
+      mock_confirm("No")
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.truthy(vim.api.nvim_buf_is_valid(bufnr))
+    end)
+
+    it("notifies with singular form after deleting one note", function()
+      local path = dir .. "/20260514--one.md"
+      write_file(path, { "# ONE" })
+      local msg
+      local orig_notify = vim.notify
+      vim.notify = function(m, _) msg = m end
+      local h = setup_mock({}, path)
+      mock_confirm("Yes")
+      tel.delete_notes()
+      h.enter()
+      flush()
+      vim.notify = orig_notify
+      assert.truthy(msg, "expected a notification")
+      assert.truthy(msg:find("1 note", 1, true), "expected '1 note' in message, got: " .. (msg or ""))
+      assert.falsy(msg:find("notes", 1, true), "should not use plural for 1")
+    end)
+
+    it("notifies with plural form after deleting multiple notes", function()
+      local a = dir .. "/20260514--del-a.md"
+      local b = dir .. "/20260514--del-b.md"
+      write_file(a, { "# A" })
+      write_file(b, { "# B" })
+      local multi = { { value = a }, { value = b } }
+      local msg
+      local orig_notify = vim.notify
+      vim.notify = function(m, _) msg = m end
+      local h = setup_mock(multi, nil)
+      mock_confirm("Yes")
+      tel.delete_notes()
+      h.enter()
+      flush()
+      vim.notify = orig_notify
+      assert.truthy(msg, "expected a notification")
+      assert.truthy(msg:find("2 notes", 1, true), "expected '2 notes' in message, got: " .. (msg or ""))
+    end)
+
+    it("confirm prompt for single note includes the filename", function()
+      local path = dir .. "/20260514--my-note.md"
+      write_file(path, { "# MY NOTE" })
+      local prompt_text
+      vim.ui.select = function(_, opts, cb)
+        prompt_text = opts.prompt
+        cb("No")
+      end
+      local h = setup_mock({}, path)
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.truthy(prompt_text, "vim.ui.select should have been called")
+      assert.truthy(
+        prompt_text:find("20260514--my-note.md", 1, true),
+        "prompt should include the filename, got: " .. (prompt_text or "")
+      )
+    end)
+
+    it("confirm prompt for multiple notes includes the count", function()
+      local a = dir .. "/20260514--alpha.md"
+      local b = dir .. "/20260514--beta.md"
+      local c = dir .. "/20260514--gamma.md"
+      write_file(a, { "# A" })
+      write_file(b, { "# B" })
+      write_file(c, { "# C" })
+      local prompt_text
+      vim.ui.select = function(_, opts, cb)
+        prompt_text = opts.prompt
+        cb("No")
+      end
+      local multi = { { value = a }, { value = b }, { value = c } }
+      local h = setup_mock(multi, nil)
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.truthy(prompt_text, "vim.ui.select should have been called")
+      assert.truthy(
+        prompt_text:find("3", 1, true),
+        "prompt should include the count 3, got: " .. (prompt_text or "")
+      )
+    end)
+
+    it("uses multi-selection when both multi and single entry are present", function()
+      local a = dir .. "/20260514--multi-a.md"
+      local b = dir .. "/20260514--multi-b.md"
+      local c = dir .. "/20260514--single-fallback.md"
+      write_file(a, { "# A" })
+      write_file(b, { "# B" })
+      write_file(c, { "# C" })
+      local multi = { { value = a }, { value = b } }
+      local h = setup_mock(multi, c)
+      mock_confirm("Yes")
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.equal(0, vim.fn.filereadable(a))
+      assert.equal(0, vim.fn.filereadable(b))
+      assert.equal(1, vim.fn.filereadable(c), "single entry should NOT be deleted when multiselect is active")
+    end)
+
+    it("falls back to the hovered entry when no multi-selection", function()
+      local a = dir .. "/20260514--hovered.md"
+      local b = dir .. "/20260514--untouched.md"
+      write_file(a, { "# HOVERED" })
+      write_file(b, { "# UNTOUCHED" })
+      local h = setup_mock({}, a)
+      mock_confirm("Yes")
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.equal(0, vim.fn.filereadable(a))
+      assert.equal(1, vim.fn.filereadable(b))
+    end)
+
+    it("confirm dialog offers Yes and No choices", function()
+      local path = dir .. "/20260514--choices.md"
+      write_file(path, { "# CHOICES" })
+      local choices
+      vim.ui.select = function(items, _, cb)
+        choices = items
+        cb("No")
+      end
+      local h = setup_mock({}, path)
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.truthy(choices, "vim.ui.select should be called")
+      local has_yes, has_no = false, false
+      for _, c in ipairs(choices) do
+        if c == "Yes" then has_yes = true end
+        if c == "No"  then has_no  = true end
+      end
+      assert.truthy(has_yes, "choices should include 'Yes'")
+      assert.truthy(has_no,  "choices should include 'No'")
+    end)
+
+    it("deletes partial set and still notifies if only some files exist", function()
+      local a = dir .. "/20260514--exists.md"
+      local b = dir .. "/20260514--also-exists.md"
+      write_file(a, { "# EXISTS" })
+      write_file(b, { "# ALSO EXISTS" })
+      local multi = { { value = a }, { value = b } }
+      local h = setup_mock(multi, nil)
+      mock_confirm("Yes")
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.equal(0, vim.fn.filereadable(a))
+      assert.equal(0, vim.fn.filereadable(b))
+    end)
+
+    it("does not call vim.ui.select when no entry is selected and no multi-selection", function()
+      local path = dir .. "/20260514--note.md"
+      write_file(path, { "# NOTE" })
+      local select_called = false
+      vim.ui.select = function(_, _, _) select_called = true end
+      local h = setup_mock({}, nil)
+      tel.delete_notes()
+      h.enter()
+      flush()
+      assert.falsy(select_called, "confirm dialog must not appear when nothing is selected")
+      assert.equal(1, vim.fn.filereadable(path))
+    end)
+  end)
 end)

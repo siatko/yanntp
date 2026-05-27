@@ -23,6 +23,7 @@ M.defaults = {
     search_tags       = "<leader>ngs",
     search_untagged   = "<leader>ngu",
     rename_tag        = "<leader>ngr",
+    delete_notes      = "<leader>nD",
     cycle_workflow    = "<leader>nx",
     open_index        = "<leader>nvi",
     open_stats        = "<leader>nvs",
